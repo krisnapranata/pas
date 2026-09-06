@@ -13,9 +13,10 @@
     <a href="{% url 'screening:tambah_jadwal' %}" class="btn btn-primary">+ Tambah Jadwal</a>
 </div>
 
-<table class="table table-striped bg-white rounded shadow-sm">
+<div class="table-responsive">
+<table class="table table-striped bg-white rounded shadow-sm mb-0">
     <thead>
-        <tr><th>Tanggal</th><th>Jam</th><th>Lokasi</th><th>Kuota</th><th>Terisi</th><th>Status</th><th></th></tr>
+        <tr><th>Tanggal</th><th>Jam</th><th>Lokasi</th><th>Kuota</th><th>Terisi</th><th>Status</th><th>Aksi</th></tr>
     </thead>
     <tbody>
         {% for j in jadwal %}
@@ -36,4 +37,5 @@
         {% endfor %}
     </tbody>
 </table>
+</div>
 {% endblock %}
