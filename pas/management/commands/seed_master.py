@@ -25,7 +25,21 @@ class Command(BaseCommand):
             ("PAS Kendaraan", "KENDARAAN", "PAS untuk kendaraan operasional", 365, 2000000, True, True),
             ("PAS Visitor", "VISITOR", "PAS pengunjung", 1, 25000, False, False),
         ]
+        # Persyaratan umum (dipakai semua jenis)
+        umum = [
+            ("KTP", "Kartu Tanda Penduduk", "jpg,png,pdf", 2),
+            ("FOTO", "Pas Foto terbaru", "jpg,png", 2),
+            ("SURAT_PERMOHONAN", "Surat Permohonan", "pdf", 5),
+        ]
         persyaratan_map = {
+            "HARIAN": umum + [("IDENTITAS_PERUSAHAAN", "Kartu Identitas Perusahaan", "jpg,png,pdf", 2)],
+            "SEMENTARA": umum + [("SURAT_PENUGASAN", "Surat Penugasan", "pdf", 5)],
+            "BULANAN": [
+                ("KTP", "Kartu Tanda Penduduk", "jpg,png,pdf", 2),
+                ("FOTO", "Pas Foto terbaru", "jpg,png", 2),
+                ("SURAT_PERMOHONAN", "Surat Permohonan", "pdf", 5),
+                ("SURAT_PENUGASAN", "Surat Penugasan", "pdf", 5),
+            ],
             "TAHUNAN": [
                 ("KTP", "Kartu Tanda Penduduk", "jpg,png,pdf", 2),
                 ("FOTO", "Pas Foto terbaru", "jpg,png", 2),
@@ -33,11 +47,16 @@ class Command(BaseCommand):
                 ("SURAT_PENUGASAN", "Surat Penugasan", "pdf", 5),
                 ("SURAT_PERNYATAAN", "Surat Pernyataan", "pdf", 5),
             ],
+            "ORANG": umum + [("SURAT_SPONSOR", "Surat Sponsor/Penjamin", "pdf", 5)],
             "KENDARAAN": [
                 ("STNK", "STNK Kendaraan", "jpg,png,pdf", 2),
                 ("FOTO_KENDARAAN", "Foto Kendaraan", "jpg,png", 2),
                 ("SURAT_PERMOHONAN", "Surat Permohonan", "pdf", 5),
                 ("DOKUMEN_PERUSAHAAN", "Dokumen Perusahaan", "pdf", 5),
+            ],
+            "VISITOR": [
+                ("KTP", "Kartu Tanda Penduduk", "jpg,png,pdf", 2),
+                ("SURAT_KUNJUNGAN", "Surat Kunjungan", "pdf", 5),
             ],
         }
 
