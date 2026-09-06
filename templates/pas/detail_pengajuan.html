@@ -90,9 +90,45 @@
 </div>
 {% endif %}
 
-{% if not is_petugas and pengajuan.status == 'DRAFT' %}
-<div class="mt-3">
-    <a href="{% url 'pas:submit_pengajuan' pengajuan.pk %}" class="btn btn-success">Ajukan Pengajuan</a>
+{% if not is_petugas %}
+<div class="row g-3 mt-1">
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-success">
+            <div class="card-body">
+                <h6 class="card-title">Langkah Berikutnya</h6>
+                {% if pengajuan.status == 'DRAFT' %}
+                    <p class="text-muted small mb-2">Lengkapi dokumen persyaratan, lalu ajukan pengajuan.</p>
+                    <a href="{% url 'pas:submit_pengajuan' pengajuan.pk %}" class="btn btn-success">Ajukan Pengajuan</a>
+                {% elif pengajuan.status == 'SUBMITTED' or pengajuan.status == 'DOCUMENT_REVIEW' %}
+                    <p class="text-muted small mb-2">Pengajuan sedang ditinjau. Tunggu verifikator menyetujui dokumen Anda.</p>
+                {% elif pengajuan.status == 'REVISION_REQUIRED' %}
+                    <p class="text-muted small mb-2">Ada dokumen yang perlu direvisi. Periksa catatan verifikator lalu upload ulang dokumen yang invalid.</p>
+                {% elif pengajuan.status == 'ADMIN_APPROVED' or pengajuan.status == 'WAITING_SCREENING' %}
+                    <p class="text-muted small mb-2">Dokumen disetujui. Pilih jadwal screening untuk melanjutkan.</p>
+                    <a href="{% url 'screening:jadwal_list' %}" class="btn btn-success">Booking Jadwal Screening</a>
+                {% elif pengajuan.status == 'SCREENING_SCHEDULED' %}
+                    <p class="text-muted small mb-2">Jadwal screening sudah dibooking. Hadir sesuai jadwal untuk pemeriksaan.</p>
+                    <a href="{% url 'screening:booking_saya' %}" class="btn btn-outline-success">Lihat Booking Saya</a>
+                {% elif pengajuan.status == 'SCREENING_PASSED' or pengajuan.status == 'WAITING_PAYMENT' %}
+                    <p class="text-muted small mb-2">Anda lulus screening. Lanjutkan ke pembayaran.</p>
+                    {% if pengajuan.invoice %}
+                    <a href="{% url 'pembayaran:bayar' pengajuan.invoice.pk %}" class="btn btn-success">Bayar Sekarang</a>
+                    {% else %}
+                    <a href="{% url 'pembayaran:buat_invoice' pengajuan.pk %}" class="btn btn-success">Buat Invoice &amp; Bayar</a>
+                    {% endif %}
+                {% elif pengajuan.status == 'PAYMENT_PAID' or pengajuan.status == 'WAITING_APPROVAL' %}
+                    <p class="text-muted small mb-2">Pembayaran lunas. Menunggu proses approval.</p>
+                {% elif pengajuan.status == 'PAS_ISSUED' %}
+                    <p class="text-muted small mb-2">PAS telah diterbitkan. Lihat dan cetak kartu PAS Anda.</p>
+                    <a href="{% url 'pas:cetak_pas' pengajuan.pas_card.pk %}" class="btn btn-success">Lihat / Cetak PAS</a>
+                {% elif pengajuan.status == 'SCREENING_FAILED' %}
+                    <p class="text-muted small mb-2">Anda tidak lulus screening. Hubungi petugas terkait.</p>
+                {% elif pengajuan.status == 'REJECTED' %}
+                    <p class="text-muted small mb-2">Pengajuan ditolak. Hubungi petugas untuk informasi lebih lanjut.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 </div>
 {% endif %}
 
