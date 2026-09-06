@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Perusahaan{% endblock %}
+
+{% block nav %}
+<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
+<li class="nav-item"><a class="nav-link active" href="{% url 'perusahaan:daftar_perusahaan' %}">Perusahaan</a></li>
+<li class="nav-item"><a class="nav-link" href="{% url 'pas:daftar_pengajuan' %}">Pengajuan PAS</a></li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>Perusahaan</h4>
+    <a href="{% url 'perusahaan:buat_perusahaan' %}" class="btn btn-primary">+ Daftarkan Perusahaan</a>
+</div>
+
+<table class="table table-striped bg-white rounded shadow-sm">
+    <thead>
+        <tr><th>Nama</th><th>NIB</th><th>NPWP</th><th>PIC</th><th>Telepon</th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for p in perusahaan %}
+        <tr>
+            <td>{{ p.nama }}</td>
+            <td>{{ p.nib|default:"-" }}</td>
+            <td>{{ p.npwp|default:"-" }}</td>
+            <td>{{ p.pic|default:"-" }}</td>
+            <td>{{ p.telepon|default:"-" }}</td>
+            <td>
+                {% if request.user.is_staff or p.created_by == request.user %}
+                <a href="{% url 'perusahaan:edit_perusahaan' p.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center text-muted py-4">Belum ada perusahaan. Klik "Daftarkan Perusahaan".</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

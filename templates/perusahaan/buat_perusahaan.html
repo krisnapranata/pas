@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}{% if perusahaan %}Edit{% else %}Daftarkan{% endif %} Perusahaan{% endblock %}
+
+{% block nav %}
+<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
+<li class="nav-item"><a class="nav-link active" href="{% url 'perusahaan:daftar_perusahaan' %}">Perusahaan</a></li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h5 class="mb-4">{% if perusahaan %}Edit Perusahaan{% else %}Daftarkan Perusahaan{% endif %}</h5>
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    {% for field in form %}
+                    <div class="mb-3">
+                        <label class="form-label">{{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}</label>
+                        {{ field }}
+                        {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                        {% for e in field.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                    </div>
+                    {% endfor %}
+                    <button type="submit" class="btn btn-primary">Simpan</button>
+                    <a href="{% url 'perusahaan:daftar_perusahaan' %}" class="btn btn-outline-secondary">Kembali</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

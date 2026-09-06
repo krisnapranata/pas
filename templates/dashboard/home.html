@@ -5,6 +5,7 @@
 {% block nav %}
 <li class="nav-item"><a class="nav-link active" href="{% url 'dashboard:home' %}">Dashboard</a></li>
 <li class="nav-item"><a class="nav-link" href="{% url 'accounts:profil' %}">Profil Saya</a></li>
+<li class="nav-item"><a class="nav-link" href="{% url 'perusahaan:daftar_perusahaan' %}">Perusahaan</a></li>
 <li class="nav-item"><a class="nav-link" href="{% url 'pas:daftar_pengajuan' %}">Pengajuan PAS</a></li>
 <li class="nav-item"><a class="nav-link" href="{% url 'pas:pas_saya' %}">PAS Saya</a></li>
 <li class="nav-item"><a class="nav-link" href="{% url 'screening:jadwal_list' %}">Jadwal Screening</a></li>
@@ -50,6 +51,7 @@
             <div class="card-body">
                 <h6 class="card-title">Menu Cepat</h6>
                 <a href="{% url 'pas:buat_pengajuan' %}" class="btn btn-sm btn-outline-primary">+ Buat Pengajuan</a>
+                <a href="{% url 'perusahaan:buat_perusahaan' %}" class="btn btn-sm btn-outline-info">+ Daftarkan Perusahaan</a>
                 <a href="{% url 'screening:jadwal_list' %}" class="btn btn-sm btn-outline-success">Jadwal Screening</a>
                 <a href="{% url 'pembayaran:invoice_saya' %}" class="btn btn-sm btn-outline-warning">Pembayaran</a>
                 <a href="{% url 'pas:pas_saya' %}" class="btn btn-sm btn-outline-secondary">PAS Saya</a>
