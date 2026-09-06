@@ -95,6 +95,27 @@ def checkin(request, pk):
 
 
 @user_passes_test(_is_petugas)
+def checkin_massal(request, pk):
+    jadwal = get_object_or_404(ScreeningSchedule, pk=pk)
+    if request.method == "POST":
+        ids = request.POST.getlist("booking_ids")
+        count = 0
+        if ids:
+            for bid in ids:
+                booking = ScreeningBooking.objects.filter(pk=bid, status="BOOKED", jadwal=jadwal).first()
+                if booking:
+                    booking.status = "CHECKED_IN"
+                    booking.save(update_fields=["status"])
+                    log_action(request, "CHECKIN_SCREENING", "ScreeningBooking", booking.pk)
+                    count += 1
+        if count:
+            messages.success(request, f"{count} peserta berhasil di-check-in.")
+        else:
+            messages.warning(request, "Tidak ada peserta yang dipilih untuk check-in.")
+    return redirect("screening:daftar_peserta", pk=pk)
+
+
+@user_passes_test(_is_petugas)
 def input_hasil(request, pk):
     booking = get_object_or_404(
         ScreeningBooking.objects.select_related("pengajuan__pemohon", "jadwal"), pk=pk
