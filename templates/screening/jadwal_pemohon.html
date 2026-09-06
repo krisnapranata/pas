@@ -30,7 +30,11 @@
                     {{ j.get_status_display }}
                 </span>
                 {% if request.user.role == 'PEMOHON' and j.sisa > 0 and j.status == 'OPEN' %}
-                <a href="{% url 'screening:book' j.pk %}" class="btn btn-sm btn-primary float-end">Booking</a>
+                <div class="d-grid mt-2">
+                    <a href="{% url 'screening:book' j.pk %}" class="btn btn-primary">Booking Jadwal Ini</a>
+                </div>
+                {% elif request.user.role == 'PEMOHON' and j.status == 'FULL' %}
+                <p class="text-center text-muted small mt-2 mb-0">Kuota penuh</p>
                 {% endif %}
                 {% if request.user.role != 'PEMOHON' %}
                 <a href="{% url 'screening:daftar_peserta' j.pk %}" class="btn btn-sm btn-outline-secondary float-end">Peserta</a>
