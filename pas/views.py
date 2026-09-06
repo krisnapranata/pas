@@ -75,10 +75,11 @@ def detail_pengajuan(request, pk):
         }
         for p in persyaratan
     ]
+    is_petugas = request.user.is_staff or getattr(request.user, "role", "") != "PEMOHON"
     return render(
         request,
         "pas/detail_pengajuan.html",
-        {"pengajuan": pengajuan, "syarat_data": syarat_data},
+        {"pengajuan": pengajuan, "syarat_data": syarat_data, "is_petugas": is_petugas},
     )
 
 
