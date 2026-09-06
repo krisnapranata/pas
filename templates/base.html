@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="id">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}PAS Bandara{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+    <script src="{% static 'js/htmx.min.js' %}" defer></script>
+    <script src="{% static 'js/bootstrap.bundle.min.js' %}" defer></script>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-3">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="{% url 'dashboard:home' %}">PAS Bandara</a>
+            {% if user.is_authenticated %}
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="nav">
+                <ul class="navbar-nav me-auto">
+                    {% block nav %}{% endblock %}
+                </ul>
+                <span class="navbar-text me-3">
+                    {{ user.get_full_name|default:user.username }}
+                    <span class="badge bg-light text-dark ms-1">{{ user.get_role_display }}</span>
+                </span>
+                <form method="post" action="{% url 'accounts:logout' %}" class="d-flex">
+                    {% csrf_token %}
+                    <button class="btn btn-outline-light btn-sm" type="submit">Keluar</button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4">
+        {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Syarat {{ jenis.nama }}{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h5>Persyaratan {{ jenis.nama }}</h5>
+        <p class="text-muted">{{ jenis.deskripsi }}</p>
+        <table class="table table-sm">
+            <thead><tr><th>#</th><th>Persyaratan</th><th>Wajib</th><th>Format</th><th>Maks</th></tr></thead>
+            <tbody>
+                {% for p in persyaratan %}
+                <tr>
+                    <td>{{ p.urutan }}</td>
+                    <td>{{ p.nama }}</td>
+                    <td>{% if p.wajib %}Ya{% else %}Tidak{% endif %}</td>
+                    <td>{{ p.format_file }}</td>
+                    <td>{{ p.max_size }} MB</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-muted">Belum ada persyaratan.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

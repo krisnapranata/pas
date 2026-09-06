@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Detail Approval{% endblock %}
+
+{% block nav %}
+<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
+<li class="nav-item"><a class="nav-link active" href="{% url 'approval:approval_list' %}">Approval</a></li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>Detail Approval — {{ pengajuan.nomor_pengajuan }}</h4>
+    <span class="badge text-bg-secondary fs-6">{{ pengajuan.get_status_display }}</span>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6>Informasi</h6>
+                <table class="table table-sm">
+                    <tr><th>Pemohon</th><td>{{ pengajuan.pemohon.get_full_name|default:pengajuan.pemohon.username }}</td></tr>
+                    <tr><th>Perusahaan</th><td>{{ pengajuan.perusahaan.nama|default:"-" }}</td></tr>
+                    <tr><th>Jenis PAS</th><td>{{ pengajuan.jenis_pas.nama }}</td></tr>
+                    <tr><th>Keperluan</th><td>{{ pengajuan.keperluan|default:"-" }}</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6>Alur Approval</h6>
+                <ol class="list-group list-group-numbered">
+                    {% for a in approvals %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ a.role }}</strong>
+                            <span class="text-muted">Level {{ a.level }}</span>
+                            {% if a.catatan %}<br><small class="text-muted">{{ a.catatan }}</small>{% endif %}
+                        </div>
+                        <div>
+                            <span class="badge text-bg-{% if a.status == 'APPROVED' %}success{% elif a.status == 'REJECTED' %}danger{% else %}secondary{% endif %}">
+                                {{ a.get_status_display }}
+                            </span>
+                            {% if a.status == 'PENDING' %}
+                            <a href="{% url 'approval:proses_approval' a.pk %}" class="btn btn-sm btn-outline-primary ms-1">Proses</a>
+                            {% endif %}
+                        </div>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item text-muted">Belum dibuat. Klik "Kirim Approval" di daftar.</li>
+                    {% endfor %}
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

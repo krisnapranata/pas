@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Input Hasil Screening{% endblock %}
+
+{% block nav %}
+<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
+<li class="nav-item"><a class="nav-link" href="{% url 'screening:jadwal_list' %}">Jadwal Screening</a></li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h5 class="mb-3">Input Hasil Screening</h5>
+                <p class="mb-1"><strong>{{ booking.pengajuan.pemohon.get_full_name|default:booking.pengajuan.pemohon.username }}</strong></p>
+                <p class="text-muted">Booking {{ booking.nomor_booking }} · Antrian {{ booking.nomor_antrian }}</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Hasil</label>
+                        <select name="hasil" class="form-select" required>
+                            <option value="">-- Pilih --</option>
+                            <option value="PASSED">Lulus</option>
+                            <option value="FAILED">Tidak Lulus</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Catatan</label>
+                        <textarea name="catatan" class="form-control" rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Simpan</button>
+                    <a href="{% url 'screening:daftar_peserta' booking.jadwal.pk %}" class="btn btn-outline-secondary">Batal</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

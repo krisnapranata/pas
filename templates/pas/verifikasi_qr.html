@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Verifikasi PAS{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-body text-center p-4">
+                {% if valid %}
+                <h4 class="text-success fw-bold mb-1">PAS VALID</h4>
+                <p class="text-muted mb-3">{{ card.nomor_pas }}</p>
+                {% else %}
+                <h4 class="text-danger fw-bold mb-1">PAS TIDAK BERLAKU</h4>
+                <p class="text-muted mb-3">{{ card.nomor_pas }} · {{ card.get_status_display }}</p>
+                {% endif %}
+                <table class="table table-sm text-start">
+                    <tr><th>Nama</th><td>{{ card.pengajuan.pemohon.get_full_name|default:card.pengajuan.pemohon.username }}</td></tr>
+                    <tr><th>Perusahaan</th><td>{{ card.pengajuan.perusahaan.nama|default:"-" }}</td></tr>
+                    <tr><th>Jenis</th><td>{{ card.jenis_pas.nama }}</td></tr>
+                    <tr><th>Berlaku sampai</th><td>{{ card.tanggal_expired|date:"d-m-Y" }}</td></tr>
+                    {% if valid %}
+                    <tr><th>Status</th><td><span class="badge text-bg-success">AKTIF</span></td></tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

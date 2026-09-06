@@ -1,0 +1,30 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Environment & secrets — JANGAN commit
+.env
+.env.*
+!.env.example
+
+# Database
+db.sqlite3
+*.sqlite3
+
+# Media (file dokumen sensitif)
+media/
+
+# Static hasil collectstatic
+staticfiles/
+
+# Logs
+*.log
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/

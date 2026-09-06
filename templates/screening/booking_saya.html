@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Booking Saya{% endblock %}
+
+{% block nav %}
+<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
+<li class="nav-item"><a class="nav-link" href="{% url 'screening:jadwal_list' %}">Jadwal Screening</a></li>
+<li class="nav-item"><a class="nav-link active" href="{% url 'screening:booking_saya' %}">Booking Saya</a></li>
+{% endblock %}
+
+{% block content %}
+<h4 class="mb-3">Booking Screening Saya</h4>
+<table class="table table-striped bg-white rounded shadow-sm">
+    <thead>
+        <tr><th>Nomor Booking</th><th>Nomor Antrian</th><th>Pengajuan</th><th>Jadwal</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+        {% for b in bookings %}
+        <tr>
+            <td>{{ b.nomor_booking }}</td>
+            <td>{{ b.nomor_antrian }}</td>
+            <td>{{ b.pengajuan.nomor_pengajuan }} ({{ b.pengajuan.jenis_pas.nama }})</td>
+            <td>{{ b.jadwal.tanggal|date:"d M Y" }} {{ b.jadwal.jam_mulai }}-{{ b.jadwal.jam_selesai }}</td>
+            <td><span class="badge text-bg-secondary">{{ b.get_status_display }}</span></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center text-muted py-4">Belum ada booking.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

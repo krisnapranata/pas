@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Detail Transaksi{% endblock %}
+
+{% block nav %}
+<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
+<li class="nav-item"><a class="nav-link active" href="{% url 'pembayaran:invoice_saya' %}">Pembayaran</a></li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="mb-3">Transaksi {{ transaksi.merchant_reference }}</h5>
+                <table class="table table-sm">
+                    <tr><th>Invoice</th><td>{{ transaksi.invoice.nomor_invoice }}</td></tr>
+                    <tr><th>Metode</th><td>{{ transaksi.payment_method.name }}</td></tr>
+                    <tr><th>Nominal</th><td>Rp {{ transaksi.amount }}</td></tr>
+                    <tr><th>Status</th><td><span class="badge text-bg-secondary">{{ transaksi.get_status_display }}</span></td></tr>
+                    {% if transaksi.va_number %}
+                    <tr><th>Nomor VA</th><td><strong>{{ transaksi.va_number }}</strong></td></tr>
+                    {% endif %}
+                    {% if transaksi.payment_url %}
+                    <tr><th>Link</th><td><a href="{{ transaksi.payment_url }}">{{ transaksi.payment_url }}</a></td></tr>
+                    {% endif %}
+                    {% if transaksi.expired_at %}
+                    <tr><th>Jatuh Tempo</th><td>{{ transaksi.expired_at|date:"d M Y H:i" }}</td></tr>
+                    {% endif %}
+                </table>
+                {% if transaksi.qr_string %}
+                <p class="text-center">
+                    <span class="badge text-bg-dark p-3">{{ transaksi.qr_string }}</span>
+                    <br><small class="text-muted">(QR placeholder — integrasikan dengan provider untuk QR nyata)</small>
+                </p>
+                {% endif %}
+                {% if transaksi.payment_method.type == 'MANUAL_TRANSFER' or transaksi.payment_method.type == 'CASH' %}
+                <a href="{% url 'pembayaran:upload_bukti' transaksi.pk %}" class="btn btn-outline-primary">Upload Bukti</a>
+                {% endif %}
+                <a href="{% url 'pembayaran:invoice_saya' %}" class="btn btn-outline-secondary">Kembali</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

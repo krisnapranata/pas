@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Pengajuan PAS{% endblock %}
+
+{% block nav %}
+<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
+<li class="nav-item"><a class="nav-link active" href="{% url 'pas:daftar_pengajuan' %}">Pengajuan PAS</a></li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>Pengajuan PAS</h4>
+    <a href="{% url 'pas:buat_pengajuan' %}" class="btn btn-primary">+ Buat Pengajuan</a>
+</div>
+
+<table class="table table-striped table-hover bg-white rounded shadow-sm">
+    <thead>
+        <tr>
+            <th>Nomor</th>
+            <th>Pemohon</th>
+            <th>Jenis PAS</th>
+            <th>Perusahaan</th>
+            <th>Status</th>
+            <th>Tanggal</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in pengajuan %}
+        <tr>
+            <td>{{ p.nomor_pengajuan|default:"-" }}</td>
+            <td>{{ p.pemohon.get_full_name|default:p.pemohon.username }}</td>
+            <td>{{ p.jenis_pas.nama }}</td>
+            <td>{{ p.perusahaan.nama|default:"-" }}</td>
+            <td><span class="badge text-bg-secondary">{{ p.get_status_display }}</span></td>
+            <td>{{ p.tanggal_pengajuan|date:"d M Y" }}</td>
+            <td><a href="{% url 'pas:detail_pengajuan' p.pk %}" class="btn btn-sm btn-outline-primary">Detail</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-center text-muted py-4">Belum ada pengajuan.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

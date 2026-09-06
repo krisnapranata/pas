@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}PAS Saya{% endblock %}
+
+{% block nav %}
+<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
+<li class="nav-item"><a class="nav-link" href="{% url 'pas:daftar_pengajuan' %}">Pengajuan PAS</a></li>
+<li class="nav-item"><a class="nav-link active" href="{% url 'pas:pas_saya' %}">PAS Saya</a></li>
+{% endblock %}
+
+{% block content %}
+<h4 class="mb-3">PAS Saya</h4>
+<table class="table table-striped bg-white rounded shadow-sm">
+    <thead>
+        <tr><th>Nomor PAS</th><th>Jenis</th><th>Berlaku</th><th>Expired</th><th>Status</th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for c in cards %}
+        <tr>
+            <td>{{ c.nomor_pas }}</td>
+            <td>{{ c.jenis_pas.nama }}</td>
+            <td>{{ c.tanggal_berlaku|date:"d M Y" }}</td>
+            <td>{{ c.tanggal_expired|date:"d M Y" }}</td>
+            <td><span class="badge text-bg-{% if c.is_valid %}success{% else %}danger{% endif %}">{{ c.get_status_display }}</span></td>
+            <td><a href="{% url 'pas:cetak_pas' c.pk %}" class="btn btn-sm btn-primary">Cetak / Lihat</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center text-muted py-4">Belum ada PAS terbit.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

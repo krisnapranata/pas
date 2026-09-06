@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Approval{% endblock %}
+
+{% block nav %}
+<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
+<li class="nav-item"><a class="nav-link active" href="{% url 'approval:approval_list' %}">Approval</a></li>
+{% endblock %}
+
+{% block content %}
+<h4 class="mb-3">Approval Pengajuan</h4>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <h6>Workflow Aktif</h6>
+        <ul class="list-unstyled mb-0">
+            {% for wf in workflows %}
+            <li><strong>{{ wf.nama }}</strong> {% if wf.jenis_pas %}({{ wf.jenis_pas.nama }}){% else %}(Default){% endif %}
+                — {% for s in wf.steps.all|dictsort:'level' %}<span class="badge text-bg-light border">{{ s.level }}. {{ s.get_role_display }}</span> {% endfor %}
+            </li>
+            {% empty %}
+            <li class="text-muted">Belum ada workflow. Buat via admin.</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+<table class="table table-striped bg-white rounded shadow-sm">
+    <thead>
+        <tr><th>Pengajuan</th><th>Pemohon</th><th>Jenis</th><th>Status</th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for p in pengajuan %}
+        <tr>
+            <td>{{ p.nomor_pengajuan }}</td>
+            <td>{{ p.pemohon.get_full_name|default:p.pemohon.username }}</td>
+            <td>{{ p.jenis_pas.nama }}</td>
+            <td><span class="badge text-bg-secondary">{{ p.get_status_display }}</span></td>
+            <td>
+                <a href="{% url 'approval:detail_approval' p.pk %}" class="btn btn-sm btn-outline-primary">Detail</a>
+                {% if p.status == 'PAYMENT_PAID' %}
+                <a href="{% url 'approval:kirim_approval' p.pk %}" class="btn btn-sm btn-success">Kirim Approval</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center text-muted py-4">Tidak ada pengajuan untuk approval.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

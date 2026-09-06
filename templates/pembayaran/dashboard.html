@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Pembayaran{% endblock %}
+
+{% block nav %}
+<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
+<li class="nav-item"><a class="nav-link active" href="{% url 'pembayaran:dashboard_pembayaran' %}">Pembayaran</a></li>
+{% endblock %}
+
+{% block content %}
+<h4 class="mb-3">Rekonsiliasi Pembayaran</h4>
+
+<form method="get" class="mb-3">
+    <select name="status" class="form-select d-inline w-auto">
+        <option value="ALL" {% if filter_status == 'ALL' %}selected{% endif %}>Semua</option>
+        <option value="PENDING" {% if filter_status == 'PENDING' %}selected{% endif %}>Pending</option>
+        <option value="PAID" {% if filter_status == 'PAID' %}selected{% endif %}>Paid</option>
+        <option value="FAILED" {% if filter_status == 'FAILED' %}selected{% endif %}>Failed</option>
+        <option value="EXPIRED" {% if filter_status == 'EXPIRED' %}selected{% endif %}>Expired</option>
+    </select>
+    <button type="submit" class="btn btn-outline-primary">Filter</button>
+</form>
+
+<table class="table table-striped bg-white rounded shadow-sm">
+    <thead>
+        <tr><th>Invoice</th><th>Metode</th><th>Nominal</th><th>Status</th><th>Aksi</th></tr>
+    </thead>
+    <tbody>
+        {% for t in transaksi %}
+        <tr>
+            <td>{{ t.invoice.nomor_invoice }}</td>
+            <td>{{ t.payment_method.name }}{% if t.va_number %} · {{ t.va_number }}{% endif %}</td>
+            <td>Rp {{ t.amount }}</td>
+            <td><span class="badge text-bg-{% if t.status == 'PAID' %}success{% elif t.status == 'FAILED' %}danger{% else %}secondary{% endif %}">{{ t.get_status_display }}</span></td>
+            <td>
+                {% if t.payment_method.type == 'MANUAL_TRANSFER' or t.payment_method.type == 'CASH' %}
+                    <a href="{% url 'pembayaran:verifikasi_manual' t.pk %}" class="btn btn-sm btn-outline-primary">Verifikasi</a>
+                {% endif %}
+                {% if t.status == 'PAID' %}
+                    <a href="{% url 'pembayaran:minta_refund' t.pk %}" class="btn btn-sm btn-outline-danger">Refund</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center text-muted py-4">Tidak ada transaksi.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Invoice Saya{% endblock %}
+
+{% block nav %}
+<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
+<li class="nav-item"><a class="nav-link" href="{% url 'pas:daftar_pengajuan' %}">Pengajuan PAS</a></li>
+<li class="nav-item"><a class="nav-link active" href="{% url 'pembayaran:invoice_saya' %}">Pembayaran</a></li>
+{% endblock %}
+
+{% block content %}
+<h4 class="mb-3">Invoice Saya</h4>
+<table class="table table-striped bg-white rounded shadow-sm">
+    <thead>
+        <tr><th>Invoice</th><th>Pengajuan</th><th>Jenis</th><th>Total</th><th>Status</th><th>Jatuh Tempo</th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for inv in invoices %}
+        <tr>
+            <td>{{ inv.nomor_invoice }}</td>
+            <td>{{ inv.pengajuan.nomor_pengajuan }}</td>
+            <td>{{ inv.pengajuan.jenis_pas.nama }}</td>
+            <td>Rp {{ inv.total }}</td>
+            <td><span class="badge text-bg-secondary">{{ inv.get_status_display }}</span></td>
+            <td>{{ inv.tanggal_jatuh_tempo|date:"d M Y H:i" }}</td>
+            <td>
+                {% if inv.status == 'UNPAID' or inv.status == 'PENDING' or inv.status == 'EXPIRED' %}
+                <a href="{% url 'pembayaran:bayar' inv.pk %}" class="btn btn-sm btn-primary">Bayar</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-center text-muted py-4">Belum ada invoice.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

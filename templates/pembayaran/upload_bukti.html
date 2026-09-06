@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Bukti Pembayaran{% endblock %}
+
+{% block nav %}
+<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
+<li class="nav-item"><a class="nav-link active" href="{% url 'pembayaran:invoice_saya' %}">Pembayaran</a></li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h5>Upload Bukti Pembayaran</h5>
+                <p class="text-muted small">Transaksi {{ transaksi.merchant_reference }} · Rp {{ transaksi.amount }}</p>
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Bukti Transfer</label>
+                        <input type="file" name="bukti" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Catatan</label>
+                        <textarea name="catatan" class="form-control" rows="2"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Upload</button>
+                    <a href="{% url 'pembayaran:detail_transaksi' transaksi.pk %}" class="btn btn-outline-secondary">Kembali</a>
+                </form>
+                <div class="alert alert-info small mt-3">
+                    Upload bukti bukan berarti lunas. Status PAID hanya setelah verifikasi petugas.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

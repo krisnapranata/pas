@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Kartu PAS{% endblock %}
+
+{% block nav %}
+<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
+<li class="nav-item"><a class="nav-link" href="{% url 'pas:pas_saya' %}">PAS Saya</a></li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm border-primary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <h6 class="text-primary fw-bold mb-0">PAS BANDARA</h6>
+                    <span class="badge text-bg-{% if card.is_valid %}primary{% else %}danger{% endif %}">
+                        {{ card.get_status_display }}
+                    </span>
+                </div>
+                <hr>
+                <div class="text-center mb-3">
+                    <img src="{{ qr }}" alt="QR Code" width="180" height="180">
+                </div>
+                <table class="table table-sm mb-0">
+                    <tr><th>PAS ID</th><td>{{ card.nomor_pas }}</td></tr>
+                    <tr><th>Nama</th><td>{{ card.pengajuan.pemohon.get_full_name|default:card.pengajuan.pemohon.username }}</td></tr>
+                    <tr><th>Perusahaan</th><td>{{ card.pengajuan.perusahaan.nama|default:"-" }}</td></tr>
+                    <tr><th>Jenis</th><td>{{ card.jenis_pas.nama }}</td></tr>
+                    <tr><th>Berlaku</th><td>{{ card.tanggal_berlaku|date:"d-m-Y" }} s/d {{ card.tanggal_expired|date:"d-m-Y" }}</td></tr>
+                </table>
+                <div class="text-center mt-3">
+                    <button onclick="window.print()" class="btn btn-primary">Cetak</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

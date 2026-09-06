@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Jadwal Screening (Admin){% endblock %}
+
+{% block nav %}
+<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
+<li class="nav-item"><a class="nav-link active" href="{% url 'screening:jadwal_list' %}">Jadwal Screening</a></li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>Jadwal Screening</h4>
+    <a href="{% url 'admin:screening_screeningschedule_add' %}" class="btn btn-primary">+ Tambah Jadwal</a>
+</div>
+
+<table class="table table-striped bg-white rounded shadow-sm">
+    <thead>
+        <tr>
+            <th>Tanggal</th><th>Jam</th><th>Lokasi</th><th>Kuota</th><th>Terisi</th><th>Sisa</th><th>Status</th><th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for j in jadwal %}
+        <tr>
+            <td>{{ j.tanggal|date:"d M Y" }}</td>
+            <td>{{ j.jam_mulai }} - {{ j.jam_selesai }}</td>
+            <td>{{ j.lokasi }}</td>
+            <td>{{ j.kuota }}</td>
+            <td>{{ j.terisi }}</td>
+            <td>{{ j.sisa }}</td>
+            <td><span class="badge text-bg-secondary">{{ j.get_status_display }}</span></td>
+            <td>
+                <a href="{% url 'screening:daftar_peserta' j.pk %}" class="btn btn-sm btn-outline-secondary">Peserta</a>
+                <a href="{% url 'admin:screening_screeningschedule_change' j.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center text-muted py-4">Belum ada jadwal.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

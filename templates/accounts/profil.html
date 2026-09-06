@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Profil Saya{% endblock %}
+
+{% block nav %}
+<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
+<li class="nav-item"><a class="nav-link" href="{% url 'accounts:profil' %}">Profil Saya</a></li>
+{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h5 class="card-title">Profil Saya</h5>
+        <table class="table">
+            <tr><th style="width:200px">Username</th><td>{{ user.username }}</td></tr>
+            <tr><th>Nama</th><td>{{ user.get_full_name|default:"-" }}</td></tr>
+            <tr><th>Email</th><td>{{ user.email|default:"-" }}</td></tr>
+            <tr><th>No. HP</th><td>{{ user.phone|default:"-" }}</td></tr>
+            <tr><th>Role</th><td>{{ user.get_role_display }}</td></tr>
+        </table>
+    </div>
+</div>
+{% endblock %}

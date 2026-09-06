@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Laporan{% endblock %}
+
+{% block nav %}
+<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
+<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:statistik' %}">Statistik</a></li>
+<li class="nav-item"><a class="nav-link active" href="{% url 'dashboard:laporan' %}">Laporan</a></li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>Laporan</h4>
+    <div>
+        <a href="{% url 'dashboard:export_pengajuan_csv' %}" class="btn btn-sm btn-outline-success">Export Pengajuan CSV</a>
+        <a href="{% url 'dashboard:export_pas_csv' %}" class="btn btn-sm btn-outline-primary">Export PAS CSV</a>
+    </div>
+</div>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-auto">
+        <select name="jenis" class="form-select">
+            <option value="">Semua Jenis</option>
+            {% for j in jenis_list %}
+            <option value="{{ j.pk }}" {% if filter_jenis == j.pk|stringformat:'s' %}selected{% endif %}>{{ j.nama }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-auto">
+        <select name="status" class="form-select">
+            <option value="">Semua Status</option>
+            {% for v, label in status_list %}
+            <option value="{{ v }}" {% if filter_status == v %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-outline-primary">Filter</button>
+    </div>
+</form>
+
+<h6 class="mt-3">Pengajuan PAS</h6>
+<table class="table table-striped bg-white rounded shadow-sm">
+    <thead>
+        <tr><th>Nomor</th><th>Pemohon</th><th>Perusahaan</th><th>Jenis</th><th>Status</th><th>Tanggal</th></tr>
+    </thead>
+    <tbody>
+        {% for p in pengajuan %}
+        <tr>
+            <td>{{ p.nomor_pengajuan }}</td>
+            <td>{{ p.pemohon.get_full_name|default:p.pemohon.username }}</td>
+            <td>{{ p.perusahaan.nama|default:"-" }}</td>
+            <td>{{ p.jenis_pas.nama }}</td>
+            <td>{{ p.get_status_display }}</td>
+            <td>{{ p.tanggal_pengajuan|date:"d M Y" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center text-muted py-4">Tidak ada data.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h6 class="mt-4">PAS Terbit</h6>
+<table class="table table-striped bg-white rounded shadow-sm">
+    <thead>
+        <tr><th>Nomor PAS</th><th>Pemohon</th><th>Jenis</th><th>Expired</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+        {% for c in pas_cards %}
+        <tr>
+            <td>{{ c.nomor_pas }}</td>
+            <td>{{ c.pengajuan.pemohon.get_full_name|default:c.pengajuan.pemohon.username }}</td>
+            <td>{{ c.jenis_pas.nama }}</td>
+            <td>{{ c.tanggal_expired|date:"d M Y" }}</td>
+            <td>{{ c.get_status_display }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center text-muted py-4">Belum ada PAS terbit.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

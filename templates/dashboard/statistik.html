@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Statistik{% endblock %}
+
+{% block nav %}
+<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
+<li class="nav-item"><a class="nav-link active" href="{% url 'dashboard:statistik' %}">Statistik</a></li>
+<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:laporan' %}">Laporan</a></li>
+{% endblock %}
+
+{% block content %}
+<h4 class="mb-3">Dashboard Management</h4>
+
+<div class="row g-3">
+    <div class="col-md-6 col-lg-3">
+        <div class="card card-stat text-bg-primary"><div class="card-body"><div class="small">Total Pengajuan</div><div class="display-6">{{ total_pengajuan }}</div></div></div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card card-stat text-bg-info"><div class="card-body"><div class="small">Total Screening</div><div class="display-6">{{ total_screening }}</div></div></div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card card-stat text-bg-success"><div class="card-body"><div class="small">Pemasukan (PAID)</div><div class="display-6">Rp {{ total_pemasukan }}</div></div></div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card card-stat text-bg-warning"><div class="card-body"><div class="small">PAS Aktif</div><div class="display-6">{{ pas_aktif }}</div></div></div>
+    </div>
+</div>
+
+<div class="row g-3 mt-1">
+    <div class="col-md-4">
+        <div class="card shadow-sm"><div class="card-body">
+            <h6>Screening</h6>
+            <p class="mb-1">Lulus: <strong>{{ screening_lulus }}</strong></p>
+            <p class="mb-0">Gagal: <strong>{{ screening_gagal }}</strong></p>
+        </div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm"><div class="card-body">
+            <h6>Pembayaran</h6>
+            <p class="mb-1">Invoice: <strong>{{ total_invoice }}</strong></p>
+            <p class="mb-0">Lunas: <strong>{{ invoice_paid }}</strong></p>
+        </div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm"><div class="card-body">
+            <h6>PAS</h6>
+            <p class="mb-1">Aktif: <strong>{{ pas_aktif }}</strong></p>
+            <p class="mb-1">Akan Expired (30 hari): <strong>{{ pas_akan_expired }}</strong></p>
+            <p class="mb-0">Expired: <strong>{{ pas_expired }}</strong></p>
+        </div></div>
+    </div>
+</div>
+
+<div class="card shadow-sm mt-3">
+    <div class="card-body">
+        <h6>Pengajuan per Jenis PAS</h6>
+        <table class="table table-sm">
+            <thead><tr><th>Jenis</th><th>Jumlah</th></tr></thead>
+            <tbody>
+                {% for j in per_jenis %}
+                <tr><td>{{ j.jenis_pas__nama }}</td><td>{{ j.c }}</td></tr>
+                {% empty %}
+                <tr><td colspan="2" class="text-muted">Belum ada data.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card shadow-sm mt-3">
+    <div class="card-body">
+        <h6>Sebaran Status Pengajuan</h6>
+        <table class="table table-sm">
+            <thead><tr><th>Status</th><th>Jumlah</th></tr></thead>
+            <tbody>
+                {% for label, count in status_rows %}
+                <tr><td>{{ label }}</td><td>{{ count }}</td></tr>
+                {% empty %}
+                <tr><td colspan="2" class="text-muted">Belum ada data.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

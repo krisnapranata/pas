@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Bayar Invoice{% endblock %}
+
+{% block nav %}
+<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
+<li class="nav-item"><a class="nav-link active" href="{% url 'pembayaran:invoice_saya' %}">Pembayaran</a></li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h5>{{ invoice.nomor_invoice }}</h5>
+                <table class="table table-sm">
+                    <tr><th>Pengajuan</th><td>{{ invoice.pengajuan.nomor_pengajuan }}</td></tr>
+                    <tr><th>Jenis PAS</th><td>{{ invoice.pengajuan.jenis_pas.nama }}</td></tr>
+                    <tr><th>Subtotal</th><td>Rp {{ invoice.subtotal }}</td></tr>
+                    <tr><th>Biaya Admin</th><td>Rp {{ invoice.biaya_admin }}</td></tr>
+                    <tr><th>Discount</th><td>Rp {{ invoice.discount }}</td></tr>
+                    <tr class="fw-bold"><th>TOTAL</th><td>Rp {{ invoice.total }}</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6>Pilih Metode Pembayaran</h6>
+                <form method="post" action="{% url 'pembayaran:buat_transaksi' invoice.pk %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <select name="method" class="form-select" required>
+                            <option value="">-- Pilih --</option>
+                            {% for m in methods %}
+                            <option value="{{ m.pk }}">{{ m.name }} ({{ m.get_type_display }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Buat Transaksi</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

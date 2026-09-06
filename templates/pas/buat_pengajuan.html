@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Buat Pengajuan{% endblock %}
+
+{% block nav %}
+<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
+<li class="nav-item"><a class="nav-link active" href="{% url 'pas:daftar_pengajuan' %}">Pengajuan PAS</a></li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h5 class="mb-4">Buat Pengajuan PAS</h5>
+                <form method="post">
+                    {% csrf_token %}
+                    {% for field in form %}
+                    <div class="mb-3">
+                        <label class="form-label">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                        {% for e in field.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                    </div>
+                    {% endfor %}
+                    <div class="alert alert-info small">
+                        Pilih tanggal mulai: tanggal selesai dihitung otomatis dari masa berlaku jenis PAS.
+                    </div>
+                    <button type="submit" class="btn btn-primary">Simpan Draft</button>
+                    <a href="{% url 'pas:daftar_pengajuan' %}" class="btn btn-outline-secondary">Batal</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

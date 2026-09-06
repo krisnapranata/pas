@@ -1,0 +1,15 @@
+body {
+    font-size: 0.95rem;
+}
+
+.card-stat .display-6 {
+    font-weight: 700;
+}
+
+.navbar-brand {
+    letter-spacing: 0.5px;
+}
+
+[htmx-indicator] { display: none; }
+.htmx-indicator { display: none; }
+.htmx-request .htmx-indicator, .htmx-request[htmx-indicator] { display: inline-block; }
