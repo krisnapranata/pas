@@ -39,6 +39,7 @@ class Command(BaseCommand):
                 ("FOTO", "Pas Foto terbaru", "jpg,png", 2),
                 ("SURAT_PERMOHONAN", "Surat Permohonan", "pdf", 5),
                 ("SURAT_PENUGASAN", "Surat Penugasan", "pdf", 5),
+                ("SKCK", "SKCK", "jpg,png,pdf", 2),
             ],
             "TAHUNAN": [
                 ("KTP", "Kartu Tanda Penduduk", "jpg,png,pdf", 2),
@@ -46,6 +47,7 @@ class Command(BaseCommand):
                 ("SURAT_PERMOHONAN", "Surat Permohonan", "pdf", 5),
                 ("SURAT_PENUGASAN", "Surat Penugasan", "pdf", 5),
                 ("SURAT_PERNYATAAN", "Surat Pernyataan", "pdf", 5),
+                ("SKCK", "SKCK", "jpg,png,pdf", 2),
             ],
             "ORANG": umum + [("SURAT_SPONSOR", "Surat Sponsor/Penjamin", "pdf", 5)],
             "KENDARAAN": [
