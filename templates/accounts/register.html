@@ -8,9 +8,32 @@
         <div class="card shadow-sm">
             <div class="card-body p-4">
                 <h4 class="card-title text-center mb-4">Registrasi Pemohon</h4>
-                <form method="post">
+
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    <strong>Pendaftaran gagal:</strong>
+                    <ul class="mb-0 small">
+                        {% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <form method="post" novalidate>
                     {% csrf_token %}
-                    {{ form.as_p }}
+                    {% for field in form %}
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}</label>
+                        {{ field }}
+                        {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                        {% if field.errors %}
+                        <div class="text-danger small">
+                            <ul class="mb-0 ps-3">
+                                {% for e in field.errors %}<li>{{ e }}</li>{% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
                     <button type="submit" class="btn btn-primary w-100">Daftar</button>
                 </form>
                 <hr>

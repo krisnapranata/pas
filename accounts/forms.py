@@ -27,6 +27,31 @@ class PemohonRegistrationForm(UserCreationForm):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.widget.attrs["class"] = "form-control"
+        # Pesan error dalam bahasa Indonesia (lebih jelas)
+        self.fields["username"].error_messages = {
+            "required": "Username wajib diisi.",
+            "unique": "Username sudah terpakai. Silakan pilih username lain.",
+            "invalid": "Username hanya boleh huruf, angka, dan @/./+/-/_.",
+        }
+        self.fields["email"].error_messages = {
+            "required": "Email wajib diisi.",
+            "invalid": "Format email tidak valid.",
+        }
+        self.fields["first_name"].error_messages = {
+            "required": "Nama depan wajib diisi.",
+        }
+        self.fields["password1"].error_messages = {
+            "required": "Password wajib diisi.",
+        }
+        self.fields["password2"].error_messages = {
+            "required": "Ulangi password Anda.",
+        }
+
+    def clean_email(self):
+        email = self.cleaned_data.get("email")
+        if email and User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("Email sudah terdaftar. Silakan gunakan email lain atau masuk.")
+        return email
 
     def save(self, commit=True):
         user = super().save(commit=False)
