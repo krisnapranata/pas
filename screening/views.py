@@ -6,6 +6,7 @@ from django.db import transaction
 from audit.models import log_action
 from pas.models import PengajuanPAS
 
+from .forms import ScreeningScheduleForm
 from .models import ScreeningBooking, ScreeningResult, ScreeningSchedule
 
 
@@ -126,3 +127,55 @@ def input_hasil(request, pk):
         messages.success(request, "Hasil screening tersimpan.")
         return redirect("screening:daftar_peserta", pk=booking.jadwal.pk)
     return render(request, "screening/input_hasil.html", {"booking": booking})
+
+
+# ---------- Kelola jadwal (petugas/admin) ----------
+
+@user_passes_test(_is_petugas)
+def kelola_jadwal(request):
+    jadwal = ScreeningSchedule.objects.all()
+    for j in jadwal:
+        j.refresh_status()
+    return render(request, "screening/kelola_jadwal.html", {"jadwal": jadwal})
+
+
+@user_passes_test(_is_petugas)
+def tambah_jadwal(request):
+    if request.method == "POST":
+        form = ScreeningScheduleForm(request.POST)
+        if form.is_valid():
+            jadwal = form.save()
+            jadwal.refresh_status()
+            log_action(request, "BUAT_JADWAL_SCREENING", "ScreeningSchedule", jadwal.pk)
+            messages.success(request, f"Jadwal {jadwal.tanggal} ditambahkan.")
+            return redirect("screening:kelola_jadwal")
+    else:
+        form = ScreeningScheduleForm()
+    return render(request, "screening/form_jadwal.html", {"form": form, "jadwal": None})
+
+
+@user_passes_test(_is_petugas)
+def edit_jadwal(request, pk):
+    jadwal = get_object_or_404(ScreeningSchedule, pk=pk)
+    if request.method == "POST":
+        form = ScreeningScheduleForm(request.POST, instance=jadwal)
+        if form.is_valid():
+            jadwal = form.save()
+            jadwal.refresh_status()
+            log_action(request, "EDIT_JADWAL_SCREENING", "ScreeningSchedule", jadwal.pk)
+            messages.success(request, "Jadwal diperbarui.")
+            return redirect("screening:kelola_jadwal")
+    else:
+        form = ScreeningScheduleForm(instance=jadwal)
+    return render(request, "screening/form_jadwal.html", {"form": form, "jadwal": jadwal})
+
+
+@user_passes_test(_is_petugas)
+def hapus_jadwal(request, pk):
+    jadwal = get_object_or_404(ScreeningSchedule, pk=pk)
+    if request.method == "POST":
+        log_action(request, "HAPUS_JADWAL_SCREENING", "ScreeningSchedule", jadwal.pk)
+        jadwal.delete()
+        messages.success(request, "Jadwal dihapus.")
+        return redirect("screening:kelola_jadwal")
+    return render(request, "screening/hapus_jadwal.html", {"jadwal": jadwal})

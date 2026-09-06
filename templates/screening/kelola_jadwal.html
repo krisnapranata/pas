@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Jadwal Screening (Admin){% endblock %}
+{% block title %}Kelola Jadwal Screening{% endblock %}
 
 {% block nav %}
 <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
@@ -9,18 +9,13 @@
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4>Jadwal Screening</h4>
-    <div>
-        <a href="{% url 'screening:kelola_jadwal' %}" class="btn btn-outline-primary">Kelola Jadwal</a>
-        <a href="{% url 'screening:tambah_jadwal' %}" class="btn btn-primary">+ Tambah Jadwal</a>
-    </div>
+    <h4>Kelola Jadwal Screening</h4>
+    <a href="{% url 'screening:tambah_jadwal' %}" class="btn btn-primary">+ Tambah Jadwal</a>
 </div>
 
 <table class="table table-striped bg-white rounded shadow-sm">
     <thead>
-        <tr>
-            <th>Tanggal</th><th>Jam</th><th>Lokasi</th><th>Kuota</th><th>Terisi</th><th>Sisa</th><th>Status</th><th></th>
-        </tr>
+        <tr><th>Tanggal</th><th>Jam</th><th>Lokasi</th><th>Kuota</th><th>Terisi</th><th>Status</th><th></th></tr>
     </thead>
     <tbody>
         {% for j in jadwal %}
@@ -30,15 +25,14 @@
             <td>{{ j.lokasi }}</td>
             <td>{{ j.kuota }}</td>
             <td>{{ j.terisi }}</td>
-            <td>{{ j.sisa }}</td>
-            <td><span class="badge text-bg-{% if j.status == 'OPEN' %}success{% elif j.status == 'FULL' %}danger{% else %}secondary{% endif %}">{{ j.get_status_display }}</span></td>
+            <td><span class="badge text-bg-secondary">{{ j.get_status_display }}</span></td>
             <td>
-                <a href="{% url 'screening:daftar_peserta' j.pk %}" class="btn btn-sm btn-outline-secondary">Peserta</a>
                 <a href="{% url 'screening:edit_jadwal' j.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                <a href="{% url 'screening:hapus_jadwal' j.pk %}" class="btn btn-sm btn-outline-danger">Hapus</a>
             </td>
         </tr>
         {% empty %}
-        <tr><td colspan="8" class="text-center text-muted py-4">Belum ada jadwal.</td></tr>
+        <tr><td colspan="7" class="text-center text-muted py-4">Belum ada jadwal.</td></tr>
         {% endfor %}
     </tbody>
 </table>
