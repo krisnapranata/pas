@@ -70,17 +70,31 @@ sudo systemctl restart pas-gunicorn
 
 ## 3. Production (server utama, via Docker)
 
-> Skeleton Docker (`Dockerfile`, `docker-compose.yml`, Nginx config) akan
-> ditambahkan pada Tahap Production. Service yang direncanakan:
-> `web` (Gunicorn), `nginx`, `db` (MariaDB), `redis`, `backup` (cron mdump DB + rsync media).
+Struktur deployment tersedia di root & `deploy/`:
+
+```
+Dockerfile                     # image Django+Gunicorn (multi-stage)
+docker-compose.yml            # web, nginx, db, redis, backup
+.dockerignore
+deploy/
+├── nginx/default.conf        # reverse proxy + static/media + webhook
+├── backup.Dockerfile         # image backup (cron dump + rsync)
+├── scripts/
+│   ├── entrypoint.sh         # migrate + collectstatic + gunicorn
+│   ├── backup.sh             # mysqldump + rsync media + retensi
+│   └── deploy_staging.sh     # deploy staging non-docker
+└── env.production.example    # template .env.production
+```
+
+Service: `web` (Gunicorn), `nginx`, `db` (MariaDB), `redis` (cache/session),
+`backup` (cron harian dump DB + rsync media).
 
 ```bash
 # di server utama
 git pull
-cp .env.example .env.production   # isi kredensial production
+cp deploy/env.production.example .env.production   # isi kredensial production
 docker compose up -d --build
-docker compose exec web python manage.py migrate
-docker compose exec web python manage.py collectstatic --noinput
+docker compose logs -f web    # pantau startup (migrate + collectstatic dijalankan otomatis)
 ```
 
 ## Alur Kerja Harian

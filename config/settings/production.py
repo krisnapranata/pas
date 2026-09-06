@@ -59,3 +59,5 @@ if REDIS_URL:
             "LOCATION": REDIS_URL,
         }
     }
+    SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+    SESSION_CACHE_ALIAS = "default"
