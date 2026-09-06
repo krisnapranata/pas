@@ -16,19 +16,46 @@ from screening.models import ScreeningBooking, ScreeningResult, ScreeningSchedul
 @login_required
 def home(request):
     user = request.user
-    is_staff = user.is_staff or getattr(user, "role", "") != "PEMOHON"
+    role = getattr(user, "role", "")
+    is_staff = user.is_staff or role != "PEMOHON"
 
-    pengajuan_qs = PengajuanPAS.objects.all()
-    if not is_staff:
-        pengajuan_qs = pengajuan_qs.filter(pemohon=user)
+    if is_staff:
+        # ---- Dashboard Petugas/Admin ----
+        antrian = {
+            "verifikasi_dokumen": PengajuanPAS.objects.filter(
+                status__in=["SUBMITTED", "DOCUMENT_REVIEW"]
+            ).count(),
+            "verifikasi_bayar": Invoice.objects.filter(
+                status__in=["UNPAID", "PENDING"]
+            )
+            .filter(transaksi__isnull=False)
+            .distinct()
+            .count(),
+            "menunggu_screening": PengajuanPAS.objects.filter(
+                status__in=["ADMIN_APPROVED", "WAITING_SCREENING", "SCREENING_SCHEDULED"]
+            ).count(),
+            "menunggu_approval": PengajuanPAS.objects.filter(
+                status__in=["PAYMENT_PAID", "WAITING_APPROVAL"]
+            ).count(),
+        }
+        konteks = {
+            "is_staff": True,
+            "role": role,
+            "antrian": antrian,
+            "total_pengajuan": PengajuanPAS.objects.count(),
+            "pas_aktif": PASCard.objects.filter(status="ACTIVE").count(),
+        }
+        return render(request, "dashboard/home_petugas.html", konteks)
 
+    # ---- Dashboard Pemohon ----
+    pengajuan_qs = PengajuanPAS.objects.filter(pemohon=user)
     konteks = {
-        "is_staff": is_staff,
+        "is_staff": False,
         "pengajuan_aktif": pengajuan_qs.filter(
-            status__in=["SUBMITTED", "DOCUMENT_REVIEW", "WAITING_SCREENING", "SCREENING_SCHEDULED", "SCREENING_PROCESS", "WAITING_PAYMENT", "WAITING_APPROVAL", "ADMIN_APPROVED", "SCREENING_PASSED"]
+            status__in=["SUBMITTED", "DOCUMENT_REVIEW", "WAITING_SCREENING", "SCREENING_SCHEDULED", "SCREENING_PROCESS", "WAITING_PAYMENT", "WAITING_APPROVAL", "ADMIN_APPROVED", "SCREENING_PASSED", "PAYMENT_PENDING"]
         ).count(),
-        "pas_aktif": PASCard.objects.filter(status="ACTIVE").count() if is_staff else PASCard.objects.filter(pengajuan__pemohon=user, status="ACTIVE").count(),
-        "tagihan": Invoice.objects.filter(status__in=["UNPAID", "PENDING"]).count() if is_staff else Invoice.objects.filter(pengajuan__pemohon=user, status__in=["UNPAID", "PENDING"]).count(),
+        "pas_aktif": PASCard.objects.filter(pengajuan__pemohon=user, status="ACTIVE").count(),
+        "tagihan": Invoice.objects.filter(pengajuan__pemohon=user, status__in=["UNPAID", "PENDING"]).count(),
     }
     return render(request, "dashboard/home.html", konteks)
 
