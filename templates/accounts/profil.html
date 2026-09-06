@@ -8,6 +8,12 @@
 {% endblock %}
 
 {% block content %}
+{% if not user.email_verified %}
+<div class="alert alert-warning d-flex justify-content-between align-items-center">
+    <span>Email Anda belum terkonfirmasi. Beberapa fitur mungkin terbatas.</span>
+    <a href="{% url 'accounts:kirim_ulang_konfirmasi' %}" class="btn btn-sm btn-outline-warning">Kirim ulang</a>
+</div>
+{% endif %}
 <div class="card shadow-sm">
     <div class="card-body">
         <h5 class="card-title">Profil Saya</h5>
@@ -17,6 +23,7 @@
             <tr><th>Email</th><td>{{ user.email|default:"-" }}</td></tr>
             <tr><th>No. HP</th><td>{{ user.phone|default:"-" }}</td></tr>
             <tr><th>Role</th><td>{{ user.get_role_display }}</td></tr>
+            <tr><th>Status Email</th><td>{% if user.email_verified %}<span class="badge text-bg-success">Terverifikasi</span>{% else %}<span class="badge text-bg-warning">Belum terverifikasi</span>{% endif %}</td></tr>
         </table>
     </div>
 </div>

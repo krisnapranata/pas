@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Registrasi Berhasil{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-body text-center p-4">
+                <h4 class="text-success mb-2">Pendaftaran Berhasil</h4>
+                <p class="mb-1">Kami telah mengirim email konfirmasi.</p>
+                <p class="text-muted small mb-3">
+                    Buka email Anda dan klik tautan konfirmasi untuk mengaktifkan akun
+                    sebelum masuk.
+                </p>
+                <p class="small text-muted">
+                    Belum menerima email? Periksa folder spam.
+                    <br>(Mode development: email tampil di console/terminal server.)
+                </p>
+                <a href="{% url 'accounts:login' %}" class="btn btn-primary">Ke Halaman Masuk</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
