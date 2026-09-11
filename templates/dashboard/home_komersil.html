@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Komersil{% endblock %}
+
+{% block content %}
+<h4 class="mb-1">Dashboard Komersil</h4>
+<p class="text-muted">Verifikasi administrasi, kelengkapan data, &amp; pembayaran.</p>
+
+<div class="row g-3">
+    <div class="col-6 col-md-3">
+        <div class="card card-stat text-bg-dark"><div class="card-body"><div class="small">Pengajuan Baru</div><div class="display-6">{{ pengajuan_baru }}</div></div></div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card card-stat text-bg-warning"><div class="card-body"><div class="small">Perlu Revisi</div><div class="display-6">{{ perlu_revisi }}</div></div></div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card card-stat text-bg-success"><div class="card-body"><div class="small">Disetujui Hari Ini</div><div class="display-6">{{ disetujui_hari_ini }}</div></div></div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card card-stat text-bg-info"><div class="card-body"><div class="small">Menunggu Verifikasi Bayar</div><div class="display-6">{{ menunggu_verifikasi_bayar }}</div></div></div>
+    </div>
+</div>
+
+<div class="card shadow-sm mt-3">
+    <div class="card-body">
+        <h6 class="mb-2">Antrian Verifikasi Dokumen</h6>
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead><tr><th>Nomor</th><th>Pemohon</th><th>Layanan</th><th>Pendamping</th><th>Total</th><th></th></tr></thead>
+                <tbody>
+                    {% for p in pengajuan %}
+                    <tr>
+                        <td>{{ p.nomor_pengajuan }}</td>
+                        <td>{{ p.pemohon.nama_lengkap }}</td>
+                        <td>{{ p.layanan.nama_layanan }}</td>
+                        <td>{{ p.jumlah_pendamping }}</td>
+                        <td>Rp {{ p.total }}</td>
+                        <td><a href="{% url 'pas:verifikasi_dokumen' p.pk %}" class="btn btn-sm btn-primary">Verifikasi</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center text-muted py-3">Tidak ada antrian verifikasi dokumen.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm mt-3">
+    <div class="card-body">
+        <h6 class="mb-2">Antrian Verifikasi Bukti Pembayaran</h6>
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead><tr><th>Invoice</th><th>Pemohon</th><th>Metode</th><th>Nominal</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                    {% for t in bukti_bayar %}
+                    <tr>
+                        <td>{{ t.invoice.nomor_invoice }}</td>
+                        <td>{{ t.invoice.pengajuan.pemohon.nama_lengkap }}</td>
+                        <td>{{ t.payment_method.name }}</td>
+                        <td>Rp {{ t.amount }}</td>
+                        <td><span class="badge text-bg-secondary">{{ t.get_status_display }}</span></td>
+                        <td><a href="{% url 'pembayaran:verifikasi_manual' t.pk %}" class="btn btn-sm btn-primary">Verifikasi</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center text-muted py-3">Tidak ada bukti pembayaran menunggu verifikasi.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -12,7 +12,6 @@ class LoginForm(AuthenticationForm):
         widget=forms.PasswordInput(attrs={"class": "form-control", "placeholder": "Password"}),
     )
 
-
 class PemohonRegistrationForm(UserCreationForm):
     first_name = forms.CharField(max_length=150, required=True)
     last_name = forms.CharField(max_length=150, required=False)
@@ -59,3 +58,30 @@ class PemohonRegistrationForm(UserCreationForm):
         if commit:
             user.save()
         return user
+
+
+class ProfilForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = [
+            "first_name",
+            "last_name",
+            "email",
+            "phone",
+            "whatsapp",
+            "nomor_identitas",
+            "instansi",
+            "alamat",
+            "jabatan",
+        ]
+        widgets = {
+            "first_name": forms.TextInput(attrs={"class": "form-control"}),
+            "last_name": forms.TextInput(attrs={"class": "form-control"}),
+            "email": forms.EmailInput(attrs={"class": "form-control"}),
+            "phone": forms.TextInput(attrs={"class": "form-control"}),
+            "whatsapp": forms.TextInput(attrs={"class": "form-control"}),
+            "nomor_identitas": forms.TextInput(attrs={"class": "form-control"}),
+            "instansi": forms.TextInput(attrs={"class": "form-control"}),
+            "alamat": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            "jabatan": forms.TextInput(attrs={"class": "form-control"}),
+        }

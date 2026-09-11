@@ -2,48 +2,70 @@
 
 {% block title %}Verifikasi Dokumen{% endblock %}
 
-{% block nav %}
-<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
-<li class="nav-item"><a class="nav-link active" href="{% url 'pas:daftar_pengajuan' %}">Pengajuan PAS</a></li>
-{% endblock %}
-
 {% block content %}
-<h4>Verifikasi Dokumen — {{ pengajuan.nomor_pengajuan }}</h4>
-<p class="text-muted">
-    Pemohon: {{ pengajuan.pemohon.get_full_name|default:pengajuan.pemohon.username }} ·
-    Jenis: {{ pengajuan.jenis_pas.nama }}
-</p>
+<h4 class="mb-1">Verifikasi Dokumen</h4>
+<p class="text-muted">{{ pengajuan.nomor_pengajuan }} — {{ pengajuan.pemohon.nama_lengkap }} ({{ pengajuan.layanan.nama_layanan }})</p>
 
 <form method="post">
     {% csrf_token %}
-    <table class="table bg-white rounded shadow-sm">
-        <thead>
-            <tr><th>Persyaratan</th><th>File</th><th>Status</th><th>Catatan</th></tr>
-        </thead>
-        <tbody>
-            {% for d in dokumen %}
-            <tr>
-                <td>{{ d.persyaratan.nama }}</td>
-                <td>
-                    {% if d.file %}
-                    <a href="{{ d.file.url }}" target="_blank">{{ d.file.name|slice:":40" }}</a>
-                    {% else %}-{% endif %}
-                </td>
-                <td>
-                    <select name="status_{{ d.pk }}" class="form-select form-select-sm">
-                        <option value="UPLOADED" {% if d.status_verifikasi == 'UPLOADED' %}selected{% endif %}>Diunggah</option>
-                        <option value="VALID" {% if d.status_verifikasi == 'VALID' %}selected{% endif %}>Valid</option>
-                        <option value="INVALID" {% if d.status_verifikasi == 'INVALID' %}selected{% endif %}>Tidak Valid</option>
-                        <option value="REVISION_REQUIRED" {% if d.status_verifikasi == 'REVISION_REQUIRED' %}selected{% endif %}>Perlu Revisi</option>
-                    </select>
-                </td>
-                <td><input type="text" name="catatan_{{ d.pk }}" value="{{ d.catatan_verifikator }}" class="form-control form-control-sm"></td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="4" class="text-center text-muted py-4">Belum ada dokumen diunggah.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    <button type="submit" class="btn btn-primary">Simpan Verifikasi</button>
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <h6>Data Pemohon & PIC</h6>
+            <table class="table table-sm">
+                <tr><th style="width:200px">Nama Pemohon</th><td>{{ pengajuan.pemohon.nama_lengkap }}</td></tr>
+                <tr><th>Instansi/Perusahaan</th><td>{{ pengajuan.pemohon.instansi|default:"-" }}</td></tr>
+                <tr><th>Nama PIC</th><td>{{ pengajuan.pic_nama|default:"-" }}</td></tr>
+                <tr><th>Jabatan PIC</th><td>{{ pengajuan.pic_jabatan|default:"-" }}</td></tr>
+                <tr><th>No. HP PIC</th><td>{{ pengajuan.pic_no_hp|default:"-" }}</td></tr>
+                <tr><th>Layanan</th><td>{{ pengajuan.layanan.nama_layanan }}</td></tr>
+                <tr><th>Tanggal</th><td>{{ pengajuan.tanggal_pelaksanaan|date:"d M Y" }}</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <h6>Dokumen Identitas Pendamping</h6>
+            <table class="table table-sm">
+                <thead><tr><th>#</th><th>Nama</th><th>Dokumen</th><th>Status</th></tr></thead>
+                <tbody>
+                    {% for pd in pendamping %}
+                    <tr>
+                        <td>{{ pd.urutan }}</td>
+                        <td>{{ pd.nama }}</td>
+                        <td style="min-width:160px">
+                            {% if pd.is_image %}
+                            <a href="{{ pd.file.url }}" target="_blank">
+                                <img src="{{ pd.file.url }}" alt="ID Card {{ pd.nama }}" style="width:160px; height:120px; object-fit:cover; border-radius:8px; background:#f4f8fc;">
+                            </a>
+                            {% else %}
+                            <a href="{{ pd.file.url }}" target="_blank">Lihat Dokumen</a>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <select name="pd_status_{{ pd.pk }}" class="form-select form-select-sm">
+                                <option value="UPLOADED" {% if pd.status_verifikasi == 'UPLOADED' %}selected{% endif %}>Diunggah</option>
+                                <option value="VALID" {% if pd.status_verifikasi == 'VALID' %}selected{% endif %}>Valid</option>
+                                <option value="INVALID" {% if pd.status_verifikasi == 'INVALID' %}selected{% endif %}>Tidak Valid</option>
+                            </select>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-muted">Tidak ada pendamping.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <label class="form-label">Catatan</label>
+            <textarea name="catatan" class="form-control mb-3" rows="2"></textarea>
+            <button type="submit" name="aksi" value="setujui" class="btn btn-success">Setujui & Teruskan ke Operasi</button>
+            <button type="submit" name="aksi" value="revisi" class="btn btn-warning">Minta Revisi</button>
+            <a href="{% url 'pas:verifikasi_list' %}" class="btn btn-outline-secondary">Kembali</a>
+        </div>
+    </div>
 </form>
 {% endblock %}

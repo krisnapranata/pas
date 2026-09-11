@@ -1,31 +1,88 @@
 {% extends "base.html" %}
 
-{% block title %}Buat Pengajuan{% endblock %}
-
-{% block nav %}
-<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
-<li class="nav-item"><a class="nav-link active" href="{% url 'pas:daftar_pengajuan' %}">Pengajuan PAS</a></li>
-{% endblock %}
+{% block title %}{% if pengajuan %}Edit Pengajuan{% else %}Buat Pengajuan{% endif %}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-lg-7">
+    <div class="col-lg-9">
         <div class="card shadow-sm">
-            <div class="card-body p-4">
-                <h5 class="mb-4">Buat Pengajuan PAS</h5>
-                <form method="post">
+            <div class="card-body">
+                <h5 class="card-title mb-3">{% if pengajuan %}Edit Pengajuan{% else %}Buat Pengajuan Layanan{% endif %}</h5>
+                <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
-                    {% for field in form %}
-                    <div class="mb-3">
-                        <label class="form-label">{{ field.label }}</label>
-                        {{ field }}
-                        {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-                        {% for e in field.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                    <h6 class="mt-2">Data Layanan</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Layanan</label>
+                            {{ form.layanan }}
+                            {{ form.layanan.errors }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tanggal Pelaksanaan</label>
+                            {{ form.tanggal_pelaksanaan }}
+                            {{ form.tanggal_pelaksanaan.errors }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Waktu Kedatangan</label>
+                            {{ form.waktu_kedatangan }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Nomor Penerbangan</label>
+                            {{ form.nomor_penerbangan }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Asal Penerbangan</label>
+                            {{ form.asal_penerbangan }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tujuan/Instansi</label>
+                            {{ form.tujuan }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Jumlah Tamu</label>
+                            {{ form.jumlah_tamu }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Jumlah Pendamping</label>
+                            {{ form.jumlah_pendamping }}
+                            {{ form.jumlah_pendamping.errors }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Keterangan Tambahan</label>
+                            {{ form.keterangan }}
+                        </div>
                     </div>
-                    {% endfor %}
-                    <div class="alert alert-info small">
-                        Pilih tanggal mulai: tanggal selesai dihitung otomatis dari masa berlaku jenis PAS.
+
+                    <h6 class="mt-4">Data PIC (Penanggung Jawab)</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nama PIC <span class="text-danger">*</span></label>
+                            {{ form.pic_nama }}
+                            {{ form.pic_nama.errors }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Jabatan PIC</label>
+                            {{ form.pic_jabatan }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Nomor Identitas PIC</label>
+                            {{ form.pic_nomor_identitas }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">No. HP PIC <span class="text-danger">*</span></label>
+                            {{ form.pic_no_hp }}
+                            {{ form.pic_no_hp.errors }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Email PIC</label>
+                            {{ form.pic_email }}
+                        </div>
                     </div>
+
+                    <h6 class="mt-4">Dokumen Identitas Pendamping</h6>
+                    <p class="text-muted small">Jumlah slot mengikuti jumlah pendamping. Lengkapi nama & dokumen identitas tiap pendamping.</p>
+                    <div id="pendamping-area" class="mb-3"></div>
+
                     <button type="submit" class="btn btn-primary">Simpan Draft</button>
                     <a href="{% url 'pas:daftar_pengajuan' %}" class="btn btn-outline-secondary">Batal</a>
                 </form>
@@ -33,4 +90,39 @@
         </div>
     </div>
 </div>
+
+{{ pendamping_names|json_script:"pendamping-names" }}
+<script>
+const existingNames = JSON.parse(document.getElementById('pendamping-names').textContent || '[]');
+function renderPendamping(n) {
+    const area = document.getElementById('pendamping-area');
+    area.innerHTML = '';
+    if (!n || n <= 0) {
+        area.innerHTML = '<p class="text-muted">Tidak ada pendamping.</p>';
+        return;
+    }
+    for (let i = 1; i <= n; i++) {
+        const name = existingNames[i - 1] || '';
+        const div = document.createElement('div');
+        div.className = 'row g-2 mb-2';
+        div.innerHTML =
+            '<div class="col-md-5">' +
+            '<label class="form-label">Nama Pendamping ' + i + '</label>' +
+            '<input type="text" name="pendamping_nama_' + i + '" class="form-control" value="' + name.replace(/"/g, '&quot;') + '" placeholder="Nama pendamping ' + i + '">' +
+            '</div>' +
+            '<div class="col-md-7">' +
+            '<label class="form-label">Dokumen Identitas (ID Card) Pendamping ' + i + '</label>' +
+            '<input type="file" name="pendamping_file_' + i + '" class="form-control" accept=".jpg,.jpeg,.png,.pdf">' +
+            '</div>';
+        area.appendChild(div);
+    }
+}
+document.addEventListener('DOMContentLoaded', function () {
+    const input = document.getElementById('id_jumlah_pendamping');
+    renderPendamping(parseInt(input.value || '0', 10));
+    input.addEventListener('input', function () {
+        renderPendamping(parseInt(input.value || '0', 10));
+    });
+});
+</script>
 {% endblock %}

@@ -2,43 +2,88 @@
 
 {% block title %}Detail Transaksi{% endblock %}
 
-{% block nav %}
-<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
-<li class="nav-item"><a class="nav-link active" href="{% url 'pembayaran:invoice_saya' %}">Pembayaran</a></li>
-{% endblock %}
-
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-lg-6">
-        <div class="card shadow-sm">
+    <div class="col-lg-7">
+        <div class="card shadow-sm mb-3">
             <div class="card-body">
-                <h5 class="mb-3">Transaksi {{ transaksi.merchant_reference }}</h5>
-                <table class="table table-sm">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Transaksi {{ transaksi.merchant_reference }}</h5>
+                    <span class="badge text-bg-secondary">{{ transaksi.get_status_display }}</span>
+                </div>
+                <table class="table table-sm mt-3 mb-0">
                     <tr><th>Invoice</th><td>{{ transaksi.invoice.nomor_invoice }}</td></tr>
-                    <tr><th>Metode</th><td>{{ transaksi.payment_method.name }}</td></tr>
-                    <tr><th>Nominal</th><td>Rp {{ transaksi.amount }}</td></tr>
-                    <tr><th>Status</th><td><span class="badge text-bg-secondary">{{ transaksi.get_status_display }}</span></td></tr>
-                    {% if transaksi.va_number %}
-                    <tr><th>Nomor VA</th><td><strong>{{ transaksi.va_number }}</strong></td></tr>
-                    {% endif %}
-                    {% if transaksi.payment_url %}
-                    <tr><th>Link</th><td><a href="{{ transaksi.payment_url }}">{{ transaksi.payment_url }}</a></td></tr>
-                    {% endif %}
+                    <tr><th>Metode</th><td>{{ transaksi.payment_method.name }} ({{ transaksi.payment_method.get_type_display }})</td></tr>
+                    <tr><th>Nominal</th><td class="fw-bold">Rp {{ transaksi.amount }}</td></tr>
                     {% if transaksi.expired_at %}
                     <tr><th>Jatuh Tempo</th><td>{{ transaksi.expired_at|date:"d M Y H:i" }}</td></tr>
                     {% endif %}
                 </table>
-                {% if transaksi.qr_string %}
-                <p class="text-center">
-                    <span class="badge text-bg-dark p-3">{{ transaksi.qr_string }}</span>
-                    <br><small class="text-muted">(QR placeholder — integrasikan dengan provider untuk QR nyata)</small>
-                </p>
-                {% endif %}
-                {% if transaksi.payment_method.type == 'MANUAL_TRANSFER' or transaksi.payment_method.type == 'CASH' %}
-                <a href="{% url 'pembayaran:upload_bukti' transaksi.pk %}" class="btn btn-outline-primary">Upload Bukti</a>
-                {% endif %}
-                <a href="{% url 'pembayaran:invoice_saya' %}" class="btn btn-outline-secondary">Kembali</a>
             </div>
+        </div>
+
+        {% if qr_data_url %}
+        <div class="card shadow-sm mb-3">
+            <div class="card-body text-center">
+                <h6>Scan QR Code (QRIS)</h6>
+                <img src="{{ qr_data_url }}" alt="QR Code" style="max-width:220px;">
+                <p class="text-muted small mt-2 mb-0">Scan dengan aplikasi pembayaran (GoPay/OVO/DANA/m-banking).</p>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if transaksi.va_number %}
+        <div class="card shadow-sm mb-3">
+            <div class="card-body text-center">
+                <h6>Nomor Virtual Account</h6>
+                <div class="display-6">{{ transaksi.va_number }}</div>
+                <p class="text-muted small mb-0">Transfer ke nomor VA di atas melalui bank/ATM/m-banking.</p>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if config.bank or config.norek %}
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h6>Rekening Tujuan</h6>
+                <table class="table table-sm mb-0">
+                    {% if config.bank %}<tr><th style="width:150px">Bank</th><td>{{ config.bank }}</td></tr>{% endif %}
+                    {% if config.norek %}<tr><th>No. Rekening</th><td class="fw-bold">{{ config.norek }}</td></tr>{% endif %}
+                    {% if config.nama %}<tr><th>Atas Nama</th><td>{{ config.nama }}</td></tr>{% endif %}
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if transaksi.payment_url %}
+        <div class="alert alert-info">
+            Link pembayaran: <a href="{{ transaksi.payment_url }}">{{ transaksi.payment_url }}</a>
+        </div>
+        {% endif %}
+
+        {% if transaksi.manual %}
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h6>Bukti Pembayaran</h6>
+                {% if transaksi.manual.is_image %}
+                <a href="{{ transaksi.manual.bukti.url }}" target="_blank">
+                    <img src="{{ transaksi.manual.bukti.url }}" alt="Bukti Pembayaran" style="width:100%; max-height:320px; object-fit:cover; border-radius:8px; background:#f4f8fc;">
+                </a>
+                {% else %}
+                <a href="{{ transaksi.manual.bukti.url }}" target="_blank">Lihat Bukti</a>
+                {% endif %}
+                {% if transaksi.manual.catatan %}
+                <div class="text-muted small mt-2">Catatan: {{ transaksi.manual.catatan }}</div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="d-flex gap-2">
+            {% if transaksi.payment_method.type == 'MANUAL_TRANSFER' or transaksi.payment_method.type == 'CASH' %}
+            <a href="{% url 'pembayaran:upload_bukti' transaksi.pk %}" class="btn btn-primary">{% if transaksi.manual %}Ganti Bukti{% else %}Upload Bukti Bayar{% endif %}</a>
+            {% endif %}
+            <a href="{% url 'pembayaran:invoice_saya' %}" class="btn btn-outline-secondary">Kembali</a>
         </div>
     </div>
 </div>

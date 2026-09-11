@@ -1,8 +1,0 @@
-<div class="border rounded p-3">
-    <strong>{{ jadwal.tanggal|date:"d M Y" }}</strong> ·
-    {{ jadwal.jam_mulai }}-{{ jadwal.jam_selesai }} ·
-    {{ jadwal.lokasi }}
-    <br>
-    Kuota {{ jadwal.kuota }} · Terisi {{ jadwal.terisi }} · Sisa {{ jadwal.sisa }}
-    <span class="badge text-bg-{% if jadwal.status == 'FULL' %}danger{% else %}success{% endif %}">{{ jadwal.get_status_display }}</span>
-</div>

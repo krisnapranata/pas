@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Notifikasi{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Notifikasi</h4>
+    <a href="{% url 'notifikasi:baca_semua' %}" class="btn btn-sm btn-outline-secondary">Tandai Semua Dibaca</a>
+</div>
+<div class="list-group">
+    {% for n in notifikasi %}
+    <a href="{% url 'notifikasi:baca' n.pk %}" class="list-group-item list-group-item-action {% if not n.is_read %}list-group-item-primary{% endif %}">
+        <div class="d-flex justify-content-between">
+            <strong>{{ n.title }}</strong>
+            <small class="text-muted">{{ n.created_at|date:"d M Y H:i" }}</small>
+        </div>
+        {% if n.message %}<div class="text-muted small">{{ n.message }}</div>{% endif %}
+    </a>
+    {% empty %}
+    <div class="text-muted py-4 text-center">Belum ada notifikasi.</div>
+    {% endfor %}
+</div>
+{% endblock %}

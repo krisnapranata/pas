@@ -4,31 +4,66 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}PAS Bandara{% endblock %}</title>
+    <title>{% block title %}Layanan Bandara{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/pas-theme.css' %}">
     <link rel="stylesheet" href="{% static 'css/app.css' %}">
     <script src="{% static 'js/htmx.min.js' %}" defer></script>
     <script src="{% static 'js/bootstrap.bundle.min.js' %}" defer></script>
 </head>
-<body class="bg-light">
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-3">
-        <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="{% url 'dashboard:home' %}">PAS Bandara</a>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light sticky-top mb-4">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand" href="{% url 'dashboard:home' %}">
+                <svg viewBox="0 0 24 24" class="brand-logo" aria-hidden="true">
+                    <path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5L21 16z"/>
+                </svg>
+                <span>PAS<span class="brand-accent">Bandara</span></span>
+            </a>
             {% if user.is_authenticated %}
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="nav">
                 <ul class="navbar-nav me-auto">
-                    {% block nav %}{% endblock %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
+                    {% if user.role == 'PEMOHON' and not user.is_staff %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'accounts:profil' %}">Profil Saya</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:daftar_pengajuan' %}">Pengajuan</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:buat_pengajuan' %}">Buat Pengajuan</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pembayaran:invoice_saya' %}">Pembayaran</a></li>
+                    {% elif user.role == 'KOMERSIL' or user.is_staff %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:verifikasi_list' %}">Verifikasi</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:daftar_pengajuan' %}">Semua Pengajuan</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pembayaran:dashboard_pembayaran' %}">Pembayaran</a></li>
+                    {% endif %}
+                    {% if user.role == 'OPERASI' or user.is_staff %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:operasi_list' %}">Operasi</a></li>
+                    {% endif %}
+                    {% if user.role == 'AOCH' or user.is_staff %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:aoch_list' %}">AOCH</a></li>
+                    {% endif %}
+                    {% if user.is_staff or user.role == 'ADMINISTRATOR' or user.role == 'KOMERSIL' or user.role == 'OPERASI' or user.role == 'AOCH' %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:statistik' %}">Statistik</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:laporan' %}">Laporan</a></li>
+                    {% endif %}
+                    {% if user.is_staff or user.role == 'ADMINISTRATOR' %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'audit:daftar' %}">Audit Log</a></li>
+                    {% endif %}
                 </ul>
-                <span class="navbar-text me-3">
-                    {{ user.get_full_name|default:user.username }}
-                    <span class="badge bg-light text-dark ms-1">{{ user.get_role_display }}</span>
+                <a class="btn btn-sm btn-outline-secondary me-2 position-relative" href="{% url 'notifikasi:daftar' %}">
+                    Notifikasi
+                    {% if unread_count %}
+                    <span class="position-absolute top-0 start-100 translate-middle badge bg-danger">{{ unread_count }}</span>
+                    {% endif %}
+                </a>
+                <span class="navbar-text me-3 d-inline-flex align-items-center gap-2">
+                    <span class="badge text-bg-secondary">{{ user.get_role_display }}</span>
+                    <span class="fw-semibold">{{ user.get_full_name|default:user.username }}</span>
                 </span>
                 <form method="post" action="{% url 'accounts:logout' %}" class="d-flex">
                     {% csrf_token %}
-                    <button class="btn btn-outline-light btn-sm" type="submit">Keluar</button>
+                    <button class="btn btn-outline-secondary btn-sm" type="submit">Keluar</button>
                 </form>
             </div>
             {% endif %}

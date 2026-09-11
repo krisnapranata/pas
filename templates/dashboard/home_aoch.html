@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard AOCH{% endblock %}
+
+{% block content %}
+<h4 class="mb-1">Dashboard AOCH</h4>
+<p class="text-muted">Monitoring & acknowledgement layanan.</p>
+
+<div class="row g-3">
+    <div class="col-6 col-md-3">
+        <div class="card card-stat text-bg-danger"><div class="card-body"><div class="small">Belum Acknowledged</div><div class="display-6">{{ belum_acknowledged }}</div></div></div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card card-stat text-bg-success"><div class="card-body"><div class="small">Acknowledged</div><div class="display-6">{{ acknowledged }}</div></div></div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card card-stat text-bg-primary"><div class="card-body"><div class="small">PAS Diterbitkan</div><div class="display-6">{{ pas_terbit }}</div></div></div>
+    </div>
+</div>
+
+<div class="card shadow-sm mt-3">
+    <div class="card-body">
+        <h6 class="mb-2">Pengajuan Akan Datang</h6>
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead><tr><th>Nomor</th><th>Pemohon</th><th>Instansi</th><th>Layanan</th><th>Tanggal</th><th>Pendamping</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                    {% for p in pengajuan %}
+                    <tr>
+                        <td>{{ p.nomor_pengajuan }}</td>
+                        <td>{{ p.pemohon.nama_lengkap }}</td>
+                        <td>{{ p.pemohon.instansi|default:"-" }}</td>
+                        <td>{{ p.layanan.nama_layanan }}</td>
+                        <td>{{ p.tanggal_pelaksanaan|date:"d-m-Y" }}</td>
+                        <td>{{ p.jumlah_pendamping }}</td>
+                        <td><span class="badge text-bg-secondary">{{ p.get_status_display }}</span></td>
+                        <td>
+                            {% if p.status == 'DIBAYAR' %}
+                            <form method="post" action="{% url 'pas:aoch_acknowledge' p.pk %}">
+                                {% csrf_token %}
+                                <button class="btn btn-sm btn-success">Acknowledge</button>
+                            </form>
+                            {% else %}
+                            <a href="{% url 'pas:detail_pengajuan' p.pk %}" class="btn btn-sm btn-outline-primary">Detail</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="8" class="text-center text-muted py-3">Tidak ada pengajuan.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

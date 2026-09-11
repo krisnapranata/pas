@@ -19,7 +19,6 @@ python manage.py collectstatic --noinput
 echo "== Seed master data (idempotent) =="
 python manage.py seed_master || true
 python manage.py seed_payment_methods || true
-python manage.py seed_workflow || true
 
 echo "== Restart Gunicorn =="
 sudo systemctl restart pas-gunicorn || echo "Gunakan supervisor/pid manual sesuai setup staging Anda."

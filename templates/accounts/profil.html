@@ -2,11 +2,6 @@
 
 {% block title %}Profil Saya{% endblock %}
 
-{% block nav %}
-<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
-<li class="nav-item"><a class="nav-link" href="{% url 'accounts:profil' %}">Profil Saya</a></li>
-{% endblock %}
-
 {% block content %}
 {% if not user.email_verified %}
 <div class="alert alert-warning d-flex justify-content-between align-items-center">
@@ -14,17 +9,59 @@
     <a href="{% url 'accounts:kirim_ulang_konfirmasi' %}" class="btn btn-sm btn-outline-warning">Kirim ulang</a>
 </div>
 {% endif %}
-<div class="card shadow-sm">
-    <div class="card-body">
-        <h5 class="card-title">Profil Saya</h5>
-        <table class="table">
-            <tr><th style="width:200px">Username</th><td>{{ user.username }}</td></tr>
-            <tr><th>Nama</th><td>{{ user.get_full_name|default:"-" }}</td></tr>
-            <tr><th>Email</th><td>{{ user.email|default:"-" }}</td></tr>
-            <tr><th>No. HP</th><td>{{ user.phone|default:"-" }}</td></tr>
-            <tr><th>Role</th><td>{{ user.get_role_display }}</td></tr>
-            <tr><th>Status Email</th><td>{% if user.email_verified %}<span class="badge text-bg-success">Terverifikasi</span>{% else %}<span class="badge text-bg-warning">Belum terverifikasi</span>{% endif %}</td></tr>
-        </table>
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Profil Saya</h5>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nama Depan</label>
+                            {{ form.first_name }}
+                            {{ form.first_name.errors }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Nama Belakang</label>
+                            {{ form.last_name }}
+                            {{ form.last_name.errors }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            {{ form.email }}
+                            {{ form.email.errors }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Nomor Identitas</label>
+                            {{ form.nomor_identitas }}
+                            {{ form.nomor_identitas.errors }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">No. HP</label>
+                            {{ form.phone }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">WhatsApp</label>
+                            {{ form.whatsapp }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Instansi/Perusahaan</label>
+                            {{ form.instansi }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Jabatan</label>
+                            {{ form.jabatan }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Alamat</label>
+                            {{ form.alamat }}
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary mt-3">Simpan</button>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

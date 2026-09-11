@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Proses Persetujuan Operasi{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h5>{{ pengajuan.nomor_pengajuan }}</h5>
+                <span class="badge text-bg-secondary">{{ pengajuan.get_status_display }}</span>
+                <table class="table table-sm mt-2">
+                    <tr><th style="width:200px">Pemohon</th><td>{{ pengajuan.pemohon.nama_lengkap }}</td></tr>
+                    <tr><th>Instansi</th><td>{{ pengajuan.pemohon.instansi|default:"-" }}</td></tr>
+                    <tr><th>Layanan</th><td>{{ pengajuan.layanan.nama_layanan }}</td></tr>
+                    <tr><th>Tanggal</th><td>{{ pengajuan.tanggal_pelaksanaan|date:"d M Y" }}</td></tr>
+                    <tr><th>Jumlah Pendamping</th><td>{{ pengajuan.jumlah_pendamping }}</td></tr>
+                    <tr><th>Tujuan/Instansi</th><td>{{ pengajuan.tujuan|default:"-" }}</td></tr>
+                    <tr class="fw-bold"><th>TOTAL</th><td>Rp {{ pengajuan.total }}</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="card-title">Dokumen Identitas Pendamping (Pengecekan Kedua)</h6>
+                <div class="row g-3">
+                    {% for pd in pendamping %}
+                    <div class="col-6 col-md-4 col-lg-3">
+                        <div class="border rounded p-2 text-center h-100">
+                            <div class="fw-semibold mb-2">{{ pd.urutan }}. {{ pd.nama }}</div>
+                            {% if pd.is_image %}
+                            <a href="{{ pd.file.url }}" target="_blank" class="d-block">
+                                <img src="{{ pd.file.url }}" alt="ID Card {{ pd.nama }}" style="width:100%; height:220px; object-fit:cover; border-radius:8px; background:#f4f8fc;">
+                            </a>
+                            {% else %}
+                            <a href="{{ pd.file.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">Lihat Dokumen</a>
+                            {% endif %}
+                            <div class="mt-2"><span class="badge text-bg-secondary">{{ pd.get_status_verifikasi_display }}</span></div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="col-12 text-muted">Tidak ada pendamping.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        {% if pengajuan.status == 'MENUNGGU_OPERASI' %}
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Alasan (wajib jika menolak)</label>
+                        <textarea name="alasan" class="form-control" rows="2"></textarea>
+                    </div>
+                    <button type="submit" name="aksi" value="SETUJUI" class="btn btn-success">Setujui</button>
+                    <button type="submit" name="aksi" value="TOLAK" class="btn btn-danger">Tolak</button>
+                    <a href="{% url 'pas:operasi_list' %}" class="btn btn-outline-secondary">Kembali</a>
+                </form>
+            </div>
+        </div>
+        {% elif pengajuan.status == 'DIBAYAR' or pengajuan.status == 'ACKNOWLEDGED_AOCH' %}
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6>Penerbitan PAS</h6>
+                <p class="text-muted small mb-3">Pembayaran sudah diverifikasi lunas. Terbitkan PAS agar pemohon dapat mengambil kartu di Operasi.</p>
+                <form method="post" action="{% url 'pas:terbitkan_pas' pengajuan.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary">Terbitkan PAS</button>
+                </form>
+            </div>
+        </div>
+        {% elif pengajuan.status == 'PAS_TERBIT' %}
+        <div class="alert alert-success">PAS telah diterbitkan. Pemohon dapat mengambil kartu PAS di Operasi.</div>
+        {% elif pengajuan.status == 'SIAP_DILAKSANAKAN' %}
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form method="post" action="{% url 'pas:tandai_pelaksanaan' pengajuan.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" name="aksi" value="DILAKSANAKAN" class="btn btn-primary">Tandai Dilaksanakan</button>
+                </form>
+            </div>
+        </div>
+        {% elif pengajuan.status == 'DILAKSANAKAN' %}
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form method="post" action="{% url 'pas:tandai_pelaksanaan' pengajuan.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" name="aksi" value="SELESAI" class="btn btn-success">Tandai Selesai</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

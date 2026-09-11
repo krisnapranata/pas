@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Pengajuan AOCH{% endblock %}
+
+{% block content %}
+<h4 class="mb-3">Monitoring & Acknowledgement (AOCH)</h4>
+<div class="table-responsive">
+    <table class="table table-striped bg-white rounded shadow-sm">
+        <thead>
+            <tr><th>Nomor</th><th>Pemohon</th><th>Instansi</th><th>Layanan</th><th>Tanggal</th><th>Pendamping</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody>
+            {% for p in pengajuan %}
+            <tr>
+                <td>{{ p.nomor_pengajuan }}</td>
+                <td>{{ p.pemohon.nama_lengkap }}</td>
+                <td>{{ p.pemohon.instansi|default:"-" }}</td>
+                <td>{{ p.layanan.nama_layanan }}</td>
+                <td>{{ p.tanggal_pelaksanaan|date:"d-m-Y" }}</td>
+                <td>{{ p.jumlah_pendamping }}</td>
+                <td><span class="badge text-bg-secondary">{{ p.get_status_display }}</span></td>
+                <td>
+                    {% if p.status == 'DIBAYAR' %}
+                    <form method="post" action="{% url 'pas:aoch_acknowledge' p.pk %}">
+                        {% csrf_token %}
+                        <button class="btn btn-sm btn-success">Acknowledge</button>
+                    </form>
+                    {% else %}
+                    <a href="{% url 'pas:detail_pengajuan' p.pk %}" class="btn btn-sm btn-outline-primary">Detail</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="8" class="text-center text-muted py-4">Tidak ada pengajuan.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

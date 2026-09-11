@@ -7,13 +7,11 @@ from django.urls import include, path
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", include("accounts.urls")),
-    path("perusahaan/", include("perusahaan.urls")),
     path("pas/", include("pas.urls")),
-    path("screening/", include("screening.urls")),
     path("pembayaran/", include("pembayaran.urls")),
-    path("approval/", include("approval.urls")),
     path("dashboard/", include("dashboard.urls")),
     path("audit/", include("audit.urls")),
+    path("notifikasi/", include("notifikasi.urls")),
 ]
 
 if settings.DEBUG:

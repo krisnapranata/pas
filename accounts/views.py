@@ -7,7 +7,7 @@ from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 
 from .email_utils import send_email_confirmation
-from .forms import LoginForm, PemohonRegistrationForm
+from .forms import LoginForm, PemohonRegistrationForm, ProfilForm
 from .models import User
 
 
@@ -78,7 +78,12 @@ def konfirmasi_email(request, uidb64, token):
 
 @login_required
 def profil_view(request):
-    return render(request, "accounts/profil.html")
+    form = ProfilForm(request.POST or None, instance=request.user)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Profil berhasil diperbarui.")
+        return redirect("accounts:profil")
+    return render(request, "accounts/profil.html", {"form": form})
 
 
 def logout_view(request):

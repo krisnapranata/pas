@@ -9,5 +9,4 @@ urlpatterns = [
     path("statistik/", views.statistik, name="statistik"),
     path("laporan/", views.laporan, name="laporan"),
     path("laporan/pengajuan.csv", views.export_pengajuan_csv, name="export_pengajuan_csv"),
-    path("laporan/pas.csv", views.export_pas_csv, name="export_pas_csv"),
 ]

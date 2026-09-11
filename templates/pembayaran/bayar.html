@@ -2,11 +2,6 @@
 
 {% block title %}Bayar Invoice{% endblock %}
 
-{% block nav %}
-<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
-<li class="nav-item"><a class="nav-link active" href="{% url 'pembayaran:invoice_saya' %}">Pembayaran</a></li>
-{% endblock %}
-
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-lg-7">
@@ -15,7 +10,7 @@
                 <h5>{{ invoice.nomor_invoice }}</h5>
                 <table class="table table-sm">
                     <tr><th>Pengajuan</th><td>{{ invoice.pengajuan.nomor_pengajuan }}</td></tr>
-                    <tr><th>Jenis PAS</th><td>{{ invoice.pengajuan.jenis_pas.nama }}</td></tr>
+                    <tr><th>Layanan</th><td>{{ invoice.pengajuan.layanan.nama_layanan }}</td></tr>
                     <tr><th>Subtotal</th><td>Rp {{ invoice.subtotal }}</td></tr>
                     <tr><th>Biaya Admin</th><td>Rp {{ invoice.biaya_admin }}</td></tr>
                     <tr><th>Discount</th><td>Rp {{ invoice.discount }}</td></tr>
@@ -29,16 +24,25 @@
                 <h6>Pilih Metode Pembayaran</h6>
                 <form method="post" action="{% url 'pembayaran:buat_transaksi' invoice.pk %}">
                     {% csrf_token %}
-                    <div class="mb-3">
-                        <select name="method" class="form-select" required>
-                            <option value="">-- Pilih --</option>
-                            {% for m in methods %}
-                            <option value="{{ m.pk }}">{{ m.name }} ({{ m.get_type_display }})</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Buat Transaksi</button>
+                    {% for m in methods %}
+                    <label class="d-flex justify-content-between align-items-center border rounded p-3 mb-2 {% if forloop.first %}border-primary{% endif %}" style="cursor:pointer;">
+                        <span>
+                            <input type="radio" name="method" value="{{ m.pk }}" {% if forloop.first %}checked{% endif %} class="me-2">
+                            <strong>{{ m.name }}</strong>
+                            <span class="badge text-bg-secondary ms-1">{{ m.get_type_display }}</span>
+                            {% if m.configuration.norek %}
+                            <div class="text-muted small mt-1">
+                                {{ m.configuration.bank }} · <strong>{{ m.configuration.norek }}</strong> · a.n. {{ m.configuration.nama }}
+                            </div>
+                            {% endif %}
+                        </span>
+                    </label>
+                    {% endfor %}
+                    <button type="submit" class="btn btn-primary w-100 mt-2">Buat Transaksi</button>
                 </form>
+                <p class="text-muted small mt-2 mb-0">
+                    Setelah memilih metode, detail pembayaran (QR Code / Nomor VA / No. Rekening) akan ditampilkan.
+                </p>
             </div>
         </div>
     </div>

@@ -30,13 +30,11 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # Local apps
     "accounts",
-    "perusahaan",
     "pas",
-    "screening",
     "pembayaran",
-    "approval",
     "dashboard",
     "audit",
+    "notifikasi",
 ]
 
 MIDDLEWARE = [
@@ -61,6 +59,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "notifikasi.context_processors.unread_notifications",
             ],
         },
     },

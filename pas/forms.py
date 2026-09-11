@@ -1,47 +1,72 @@
 from django import forms
-from django.core.validators import FileExtensionValidator
 
-from .models import DokumenPengajuan, PengajuanPAS
+from .models import Pengajuan
 
 
 class PengajuanForm(forms.ModelForm):
     class Meta:
-        model = PengajuanPAS
-        fields = ["perusahaan", "jenis_pas", "tanggal_mulai", "keperluan", "area_akses"]
+        model = Pengajuan
+        fields = [
+            "layanan",
+            "tanggal_pelaksanaan",
+            "waktu_kedatangan",
+            "nomor_penerbangan",
+            "asal_penerbangan",
+            "tujuan",
+            "jumlah_tamu",
+            "jumlah_pendamping",
+            "pic_nama",
+            "pic_jabatan",
+            "pic_nomor_identitas",
+            "pic_no_hp",
+            "pic_email",
+            "keterangan",
+        ]
         widgets = {
-            "tanggal_mulai": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
-            "keperluan": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
-            "perusahaan": forms.Select(attrs={"class": "form-select"}),
-            "jenis_pas": forms.Select(attrs={"class": "form-select"}),
-            "area_akses": forms.SelectMultiple(attrs={"class": "form-select"}),
+            "layanan": forms.Select(attrs={"class": "form-select"}),
+            "tanggal_pelaksanaan": forms.DateInput(
+                attrs={"type": "date", "class": "form-control"}
+            ),
+            "waktu_kedatangan": forms.TimeInput(
+                attrs={"type": "time", "class": "form-control"}
+            ),
+            "nomor_penerbangan": forms.TextInput(attrs={"class": "form-control"}),
+            "asal_penerbangan": forms.TextInput(attrs={"class": "form-control"}),
+            "tujuan": forms.TextInput(attrs={"class": "form-control"}),
+            "jumlah_tamu": forms.NumberInput(attrs={"class": "form-control", "min": 0}),
+            "jumlah_pendamping": forms.NumberInput(
+                attrs={"class": "form-control", "min": 0, "id": "id_jumlah_pendamping"}
+            ),
+            "pic_nama": forms.TextInput(attrs={"class": "form-control"}),
+            "pic_jabatan": forms.TextInput(attrs={"class": "form-control"}),
+            "pic_nomor_identitas": forms.TextInput(attrs={"class": "form-control"}),
+            "pic_no_hp": forms.TextInput(attrs={"class": "form-control"}),
+            "pic_email": forms.EmailInput(attrs={"class": "form-control"}),
+            "keterangan": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["jenis_pas"].queryset = self.fields["jenis_pas"].queryset.filter(
-            status_aktif=True
-        )
-        self.fields["area_akses"].queryset = self.fields["area_akses"].queryset.filter(
-            status_aktif=True
-        )
+        self.fields["layanan"].queryset = self.fields["layanan"].queryset.filter(aktif=True)
+        self.fields["layanan"].empty_label = "-- Pilih Layanan --"
+        self.fields["jumlah_pendamping"].initial = 0
+        self.fields["jumlah_tamu"].initial = 0
+        self.fields["pic_nama"].required = True
+        self.fields["pic_no_hp"].required = True
 
-
-class DokumenUploadForm(forms.ModelForm):
-    class Meta:
-        model = DokumenPengajuan
-        fields = ["file", "nomor_dokumen"]
-        widgets = {
-            "file": forms.ClearableFileInput(attrs={"class": "form-control"}),
-            "nomor_dokumen": forms.TextInput(attrs={"class": "form-control"}),
-        }
-
-    def __init__(self, *args, persyaratan=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        if persyaratan:
-            allowed = [
-                e.strip().lower()
-                for e in persyaratan.format_file.split(",")
-                if e.strip()
-            ]
-            if allowed:
-                self.fields["file"].validators = [FileExtensionValidator(allowed)]
+    def clean(self):
+        cleaned = super().clean()
+        layanan = cleaned.get("layanan")
+        jumlah_pendamping = cleaned.get("jumlah_pendamping") or 0
+        if layanan:
+            if jumlah_pendamping < layanan.minimal_pendamping:
+                self.add_error(
+                    "jumlah_pendamping",
+                    f"Minimal pendamping untuk layanan ini adalah {layanan.minimal_pendamping}.",
+                )
+            if layanan.maksimal_pendamping and jumlah_pendamping > layanan.maksimal_pendamping:
+                self.add_error(
+                    "jumlah_pendamping",
+                    f"Maksimal pendamping untuk layanan ini adalah {layanan.maksimal_pendamping}.",
+                )
+        return cleaned

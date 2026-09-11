@@ -1,6 +1,9 @@
+import base64
+import io
 import json
 import logging
 
+import qrcode
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -11,7 +14,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from audit.models import log_action
-from pas.models import PengajuanPAS
+from notifikasi.services import notify_role
+from pas.models import Pengajuan
 
 from .models import (
     Invoice,
@@ -28,16 +32,15 @@ logger = logging.getLogger(__name__)
 
 def _is_petugas_pembayaran(user):
     return user.is_authenticated and (
-        user.is_staff or getattr(user, "role", "") in ("PETUGAS_PEMBAYARAN", "ADMIN_PAS")
+        user.is_staff or getattr(user, "role", "") in ("ADMINISTRATOR", "KOMERSIL")
     )
 
 
 def get_or_create_invoice(pengajuan):
-    """Buat invoice dari jenis PAS jika belum ada (biaya dari JenisPAS)."""
+    """Buat invoice dari snapshot total pengajuan jika belum ada."""
     invoice, created = Invoice.objects.get_or_create(pengajuan=pengajuan)
     if created:
-        biaya = pengajuan.jenis_pas.biaya
-        invoice.subtotal = biaya
+        invoice.subtotal = pengajuan.total
         invoice.biaya_admin = 0
         invoice.discount = 0
         invoice.tax = 0
@@ -50,20 +53,18 @@ def get_or_create_invoice(pengajuan):
 
 @login_required
 def invoice_saya(request):
-    invoices = Invoice.objects.filter(pengajuan__pemohon=request.user).select_related("pengajuan__jenis_pas")
+    invoices = Invoice.objects.filter(pengajuan__pemohon=request.user).select_related("pengajuan__layanan")
     return render(request, "pembayaran/invoice_saya.html", {"invoices": invoices})
 
 
 @login_required
 def buat_invoice(request, pengajuan_id):
-    pengajuan = get_object_or_404(PengajuanPAS, pk=pengajuan_id, pemohon=request.user)
-    # Hanya bisa buat invoice setelah lulus screening (sesuai SOP screening-then-pay)
-    if pengajuan.status not in (PengajuanPAS.Status.SCREENING_PASSED, PengajuanPAS.Status.WAITING_PAYMENT):
-        messages.error(request, "Pengajuan belum dapat ditagih (harus lulus screening dulu).")
+    pengajuan = get_object_or_404(Pengajuan, pk=pengajuan_id, pemohon=request.user)
+    # Hanya bisa buat invoice setelah Operasi menyetujui (link pembayaran aktif)
+    if pengajuan.status != Pengajuan.Status.MENUNGGU_PEMBAYARAN:
+        messages.error(request, "Link pembayaran belum aktif (menunggu persetujuan Operasi).")
         return redirect("pas:detail_pengajuan", pk=pengajuan.pk)
     invoice = get_or_create_invoice(pengajuan)
-    pengajuan.status = PengajuanPAS.Status.WAITING_PAYMENT
-    pengajuan.save(update_fields=["status", "updated_at"])
     log_action(request, "BUAT_INVOICE", "Invoice", invoice.pk)
     return redirect("pembayaran:bayar", invoice_id=invoice.pk)
 
@@ -91,6 +92,20 @@ def buat_transaksi(request, invoice_id):
         invoice.status = Invoice.Status.UNPAID
         invoice.tanggal_jatuh_tempo = timezone.now() + timezone.timedelta(hours=24)
         invoice.save()
+
+    # Sudah ada bukti diunggah & menunggu verifikasi -> jangan buat transaksi baru
+    existing = (
+        PaymentTransaction.objects.filter(
+            invoice=invoice,
+            status=PaymentTransaction.Status.PENDING,
+            manual__isnull=False,
+        )
+        .order_by("-created_at")
+        .first()
+    )
+    if existing:
+        messages.info(request, "Bukti pembayaran sudah diunggah dan menunggu verifikasi petugas.")
+        return redirect("pembayaran:detail_transaksi", pk=existing.pk)
 
     # Nonaktifkan transaksi lama yang masih menunggu
     PaymentTransaction.objects.filter(
@@ -129,10 +144,33 @@ def buat_transaksi(request, invoice_id):
 
 @login_required
 def detail_transaksi(request, pk):
-    transaksi = get_object_or_404(PaymentTransaction.objects.select_related("invoice", "payment_method"), pk=pk)
+    transaksi = get_object_or_404(
+        PaymentTransaction.objects.select_related("invoice", "payment_method", "manual"), pk=pk
+    )
     if not (transaksi.invoice.pengajuan.pemohon == request.user or _is_petugas_pembayaran(request.user)):
         return redirect("pembayaran:invoice_saya")
-    return render(request, "pembayaran/detail_transaksi.html", {"transaksi": transaksi})
+
+    qr_data_url = None
+    if transaksi.qr_string:
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            box_size=8,
+            border=2,
+        )
+        qr.add_data(transaksi.qr_string)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        qr_data_url = "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+
+    config = transaksi.payment_method.configuration or {}
+    return render(
+        request,
+        "pembayaran/detail_transaksi.html",
+        {"transaksi": transaksi, "qr_data_url": qr_data_url, "config": config},
+    )
 
 
 @login_required
@@ -143,12 +181,22 @@ def upload_bukti(request, pk):
         return redirect("pembayaran:invoice_saya")
     if request.method == "POST" and "bukti" in request.FILES:
         manual, _ = PembayaranManual.objects.get_or_create(transaksi=transaksi)
+        if manual.bukti:
+            manual.bukti.delete(save=False)
         manual.bukti = request.FILES["bukti"]
         manual.catatan = request.POST.get("catatan", "")
         manual.save()
         transaksi.status = PaymentTransaction.Status.PENDING
         transaksi.save(update_fields=["status"])
         log_action(request, "UPLOAD_BUKTI_BAYAR", "PaymentTransaction", transaksi.pk)
+        notify_role(
+            "KOMERSIL",
+            "Bukti pembayaran diunggah",
+            f"{invoice.pengajuan.pemohon.nama_lengkap} mengunggah bukti pembayaran untuk "
+            f"{invoice.nomor_invoice} (Rp {transaksi.amount:,.0f}). Menunggu verifikasi.",
+            url=f"/pembayaran/verifikasi/{transaksi.pk}/",
+            pengajuan=invoice.pengajuan,
+        )
         messages.success(request, "Bukti pembayaran diunggah. Menunggu verifikasi petugas.")
         return redirect("pembayaran:detail_transaksi", pk=transaksi.pk)
     return render(request, "pembayaran/upload_bukti.html", {"transaksi": transaksi})
@@ -188,7 +236,7 @@ def tandai_lunas(request, transaksi):
     invoice.status = Invoice.Status.PAID
     invoice.save(update_fields=["status", "updated_at"])
     pengajuan = invoice.pengajuan
-    pengajuan.status = PengajuanPAS.Status.PAYMENT_PAID
+    pengajuan.status = Pengajuan.Status.DIBAYAR
     pengajuan.save(update_fields=["status", "updated_at"])
     log_action(request, "PAYMENT_PAID", "PaymentTransaction", transaksi.pk)
     messages.success(request, "Pembayaran diverifikasi lunas.")
@@ -268,8 +316,8 @@ def _finalize_paid(transaksi):
         invoice.status = Invoice.Status.PAID
         invoice.save(update_fields=["status", "updated_at"])
     pengajuan = invoice.pengajuan
-    if pengajuan.status != PengajuanPAS.Status.PAYMENT_PAID:
-        pengajuan.status = PengajuanPAS.Status.PAYMENT_PAID
+    if pengajuan.status != Pengajuan.Status.DIBAYAR:
+        pengajuan.status = Pengajuan.Status.DIBAYAR
         pengajuan.save(update_fields=["status", "updated_at"])
 
 
@@ -281,9 +329,6 @@ def dashboard_pembayaran(request):
     qs = PaymentTransaction.objects.select_related("invoice", "payment_method")
     if filter_status != "ALL":
         qs = qs.filter(status=filter_status)
-    manual = PaymentTransaction.objects.filter(
-        invoice__transaksi__manual__isnull=False
-    )
     return render(
         request,
         "pembayaran/dashboard.html",

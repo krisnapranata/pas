@@ -19,12 +19,20 @@
         <tr>
             <td>{{ inv.nomor_invoice }}</td>
             <td>{{ inv.pengajuan.nomor_pengajuan }}</td>
-            <td>{{ inv.pengajuan.jenis_pas.nama }}</td>
+            <td>{{ inv.pengajuan.layanan.nama_layanan }}</td>
             <td>Rp {{ inv.total }}</td>
-            <td><span class="badge text-bg-secondary">{{ inv.get_status_display }}</span></td>
+            <td>
+                {% if inv.transaksi_menunggu_verifikasi %}
+                <span class="badge text-bg-warning">Menunggu Verifikasi</span>
+                {% else %}
+                <span class="badge text-bg-secondary">{{ inv.get_status_display }}</span>
+                {% endif %}
+            </td>
             <td>{{ inv.tanggal_jatuh_tempo|date:"d M Y H:i" }}</td>
             <td>
-                {% if inv.status == 'UNPAID' or inv.status == 'PENDING' or inv.status == 'EXPIRED' %}
+                {% if inv.transaksi_menunggu_verifikasi %}
+                <a href="{% url 'pembayaran:detail_transaksi' inv.transaksi_menunggu_verifikasi.pk %}" class="btn btn-sm btn-outline-secondary">Detail</a>
+                {% elif inv.status == 'UNPAID' or inv.status == 'PENDING' or inv.status == 'EXPIRED' %}
                 <a href="{% url 'pembayaran:bayar' inv.pk %}" class="btn btn-sm btn-primary">Bayar</a>
                 {% endif %}
             </td>

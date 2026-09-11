@@ -1,0 +1,8 @@
+Daftar User Demo — Layanan Bandara
+===================================
+
+admin      - ADMINISTRATOR - admin123
+pemohon1   - PEMOHON       - pemohon123
+komersil1  - KOMERSIL      - demo123
+operasi1   - OPERASI       - demo123
+aoch1      - AOCH          - demo123

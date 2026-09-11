@@ -1,147 +1,136 @@
 {% extends "base.html" %}
 
-{% block title %}{{ pengajuan.nomor_pengajuan }}{% endblock %}
-
-{% block nav %}
-<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
-<li class="nav-item"><a class="nav-link active" href="{% url 'pas:daftar_pengajuan' %}">Pengajuan PAS</a></li>
-{% endblock %}
+{% block title %}Detail Pengajuan{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4>{{ pengajuan.nomor_pengajuan|default:"Pengajuan" }}</h4>
-    <span class="badge text-bg-secondary fs-6">{{ pengajuan.get_status_display }}</span>
+    <h4 class="mb-0">{{ pengajuan.nomor_pengajuan }}</h4>
+    <span class="badge text-bg-primary fs-6">{{ pengajuan.get_status_display }}</span>
 </div>
 
+{% if pengajuan.catatan %}
+<div class="alert alert-warning"><strong>Catatan:</strong> {{ pengajuan.catatan }}</div>
+{% endif %}
+
+{% if pengajuan.status == 'PAS_TERBIT' %}
+<div class="alert alert-success"><strong>PAS telah diterbitkan.</strong> Silakan ambil kartu PAS Anda di Operasi.</div>
+{% endif %}
+
 <div class="row g-3">
-    <div class="col-lg-6">
-        <div class="card shadow-sm h-100">
+    <div class="col-lg-7">
+        <div class="card shadow-sm mb-3">
             <div class="card-body">
-                <h6 class="card-title">Informasi Pengajuan</h6>
-                <table class="table table-sm">
-                    <tr><th>Pemohon</th><td>{{ pengajuan.pemohon.get_full_name|default:pengajuan.pemohon.username }}</td></tr>
-                    <tr><th>Perusahaan</th><td>{{ pengajuan.perusahaan.nama|default:"-" }}</td></tr>
-                    <tr><th>Jenis PAS</th><td>{{ pengajuan.jenis_pas.nama }}</td></tr>
-                    <tr><th>Masa Berlaku</th><td>{{ pengajuan.jenis_pas.masa_berlaku_hari }} hari</td></tr>
-                    <tr><th>Biaya</th><td>Rp {{ pengajuan.jenis_pas.biaya }}</td></tr>
-                    <tr><th>Tanggal Mulai</th><td>{{ pengajuan.tanggal_mulai|default:"-" }}</td></tr>
-                    <tr><th>Keperluan</th><td>{{ pengajuan.keperluan|default:"-" }}</td></tr>
-                    <tr><th>Area Akses</th><td>{% for a in pengajuan.area_akses.all %}<span class="badge text-bg-light border">{{ a.nama }}</span> {% empty %}-{% endfor %}</td></tr>
+                <h6 class="card-title">Data Layanan</h6>
+                <table class="table table-sm mb-0">
+                    <tr><th style="width:200px">Layanan</th><td>{{ pengajuan.layanan.nama_layanan }}</td></tr>
+                    <tr><th>Tanggal Pelaksanaan</th><td>{{ pengajuan.tanggal_pelaksanaan|date:"d M Y" }}{% if pengajuan.waktu_kedatangan %} ({{ pengajuan.waktu_kedatangan|time:"H:i" }}){% endif %}</td></tr>
+                    <tr><th>Nomor Penerbangan</th><td>{{ pengajuan.nomor_penerbangan|default:"-" }}</td></tr>
+                    <tr><th>Asal Penerbangan</th><td>{{ pengajuan.asal_penerbangan|default:"-" }}</td></tr>
+                    <tr><th>Tujuan/Instansi</th><td>{{ pengajuan.tujuan|default:"-" }}</td></tr>
+                    <tr><th>Jumlah Tamu</th><td>{{ pengajuan.jumlah_tamu }}</td></tr>
+                    <tr><th>Jumlah Pendamping</th><td>{{ pengajuan.jumlah_pendamping }}</td></tr>
+                    <tr><th>Keterangan</th><td>{{ pengajuan.keterangan|default:"-" }}</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="card-title">Tarif</h6>
+                <table class="table table-sm mb-0">
+                    <tr><th style="width:200px">Harga Satuan</th><td>Rp {{ pengajuan.harga_satuan }}</td></tr>
+                    <tr><th>Satuan</th><td>{{ pengajuan.satuan|default:"-" }}</td></tr>
+                    <tr class="fw-bold"><th>TOTAL</th><td>Rp {{ pengajuan.total }}</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title">Data PIC (Penanggung Jawab)</h6>
+                <table class="table table-sm mb-0">
+                    <tr><th style="width:200px">Nama PIC</th><td>{{ pengajuan.pic_nama|default:"-" }}</td></tr>
+                    <tr><th>Jabatan</th><td>{{ pengajuan.pic_jabatan|default:"-" }}</td></tr>
+                    <tr><th>Nomor Identitas</th><td>{{ pengajuan.pic_nomor_identitas|default:"-" }}</td></tr>
+                    <tr><th>No. HP</th><td>{{ pengajuan.pic_no_hp|default:"-" }}</td></tr>
+                    <tr><th>Email</th><td>{{ pengajuan.pic_email|default:"-" }}</td></tr>
                 </table>
             </div>
         </div>
     </div>
 
-    <div class="col-lg-6">
-        <div class="card shadow-sm h-100">
+    <div class="col-lg-5">
+        <div class="card shadow-sm mb-3">
             <div class="card-body">
-                <h6 class="card-title">Persyaratan & Dokumen</h6>
-                <table class="table table-sm">
-                    <thead><tr><th>Persyaratan</th><th>Wajib</th><th>Status</th><th></th></tr></thead>
+                <h6 class="card-title">Dokumen Identitas Pendamping</h6>
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>#</th><th>Nama</th><th>Dokumen</th><th>Status</th></tr></thead>
                     <tbody>
-                        {% for s in syarat_data %}
+                        {% for pd in pendamping %}
                         <tr>
-                            <td>{{ s.persyaratan.nama }}</td>
-                            <td>{% if s.persyaratan.wajib %}Ya{% else %}Tidak{% endif %}</td>
-                            <td>
-                                {% if s.dokumen %}
-                                <a href="{{ s.dokumen.file.url }}" target="_blank" class="text-decoration-none">
-                                    <span class="badge text-bg-{{ s.dokumen.status_verifikasi }}">{{ s.dokumen.get_status_verifikasi_display }}</span>
-                                </a>
-                                {% else %}
-                                <span class="badge text-bg-light text-muted">Belum upload</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if not is_petugas %}
-                                <a href="{% url 'pas:upload_dokumen' pengajuan.pk s.persyaratan.pk %}" class="btn btn-sm btn-outline-secondary">{% if s.dokumen %}Ganti{% else %}Upload{% endif %}</a>
-                                {% elif s.dokumen %}
-                                <a href="{{ s.dokumen.file.url }}" class="btn btn-sm btn-outline-secondary" target="_blank">Lihat</a>
-                                {% endif %}
-                            </td>
+                            <td>{{ pd.urutan }}</td>
+                            <td>{{ pd.nama }}</td>
+                            <td><a href="{{ pd.file.url }}" target="_blank">Lihat</a></td>
+                            <td><span class="badge text-bg-secondary">{{ pd.get_status_verifikasi_display }}</span></td>
                         </tr>
                         {% empty %}
-                        <tr><td colspan="4" class="text-muted">Tidak ada persyaratan untuk jenis PAS ini.</td></tr>
+                        <tr><td colspan="4" class="text-muted">Belum ada pendamping.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         </div>
-    </div>
-</div>
 
-{% if is_petugas %}
-<div class="row g-3 mt-1">
-    <div class="col-lg-6">
-        <div class="card shadow-sm border-warning">
+        <div class="card shadow-sm mb-3">
             <div class="card-body">
-                <h6 class="card-title">Aksi Verifikasi</h6>
-                <p class="text-muted small mb-2">Verifikasi setiap dokumen lalu tentukan hasilnya.</p>
-                <a href="{% url 'pas:verifikasi_dokumen' pengajuan.pk %}" class="btn btn-warning">Verifikasi Dokumen</a>
-                {% if pengajuan.status == 'PAYMENT_PAID' or pengajuan.status == 'WAITING_APPROVAL' %}
-                <a href="{% url 'approval:kirim_approval' pengajuan.pk %}" class="btn btn-outline-primary">Kirim Approval</a>
-                {% endif %}
-                {% if pengajuan.status == 'APPROVED' %}
-                <a href="{% url 'pas:terbitkan_pas' pengajuan.pk %}" class="btn btn-success">Terbitkan PAS</a>
-                {% endif %}
+                <h6 class="card-title">Timeline Proses</h6>
+                <ul class="list-unstyled mb-0">
+                    {% for t in timeline %}
+                    <li class="d-flex align-items-start mb-2">
+                        {% if t.state == 'done' %}<span class="text-success me-2">&#10003;</span>
+                        {% elif t.state == 'current' %}<span class="text-primary me-2">&#9679;</span>
+                        {% else %}<span class="text-muted me-2">&#9675;</span>{% endif %}
+                        <span class="{% if t.state == 'todo' %}text-muted{% endif %}">{{ t.label }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
             </div>
         </div>
-    </div>
-</div>
-{% endif %}
 
-{% if not is_petugas %}
-<div class="row g-3 mt-1">
-    <div class="col-lg-6">
-        <div class="card shadow-sm border-success">
-            <div class="card-body">
-                <h6 class="card-title">Langkah Berikutnya</h6>
-                {% if pengajuan.status == 'DRAFT' %}
-                    <p class="text-muted small mb-2">Lengkapi dokumen persyaratan, lalu ajukan pengajuan.</p>
-                    <a href="{% url 'pas:submit_pengajuan' pengajuan.pk %}" class="btn btn-success">Ajukan Pengajuan</a>
-                {% elif pengajuan.status == 'SUBMITTED' or pengajuan.status == 'DOCUMENT_REVIEW' %}
-                    <p class="text-muted small mb-2">Pengajuan sedang ditinjau. Tunggu verifikator menyetujui dokumen Anda.</p>
-                {% elif pengajuan.status == 'REVISION_REQUIRED' %}
-                    <p class="text-muted small mb-2">Ada dokumen yang perlu direvisi. Periksa catatan verifikator lalu upload ulang dokumen yang invalid.</p>
-                {% elif pengajuan.status == 'ADMIN_APPROVED' or pengajuan.status == 'WAITING_SCREENING' %}
-                    <p class="text-muted small mb-2">Dokumen disetujui. Pilih jadwal screening untuk melanjutkan.</p>
-                    <a href="{% url 'screening:jadwal_list' %}" class="btn btn-success">Booking Jadwal Screening</a>
-                {% elif pengajuan.status == 'SCREENING_SCHEDULED' %}
-                    <p class="text-muted small mb-2">Jadwal screening sudah dibooking. Hadir sesuai jadwal untuk pemeriksaan.</p>
-                    <a href="{% url 'screening:booking_saya' %}" class="btn btn-outline-success">Lihat Booking Saya</a>
-                {% elif pengajuan.status == 'SCREENING_PASSED' or pengajuan.status == 'WAITING_PAYMENT' %}
-                    <p class="text-muted small mb-2">Anda lulus screening. Lanjutkan ke pembayaran.</p>
-                    {% if pengajuan.invoice %}
-                    <a href="{% url 'pembayaran:bayar' pengajuan.invoice.pk %}" class="btn btn-success">Bayar Sekarang</a>
-                    {% else %}
-                    <a href="{% url 'pembayaran:buat_invoice' pengajuan.pk %}" class="btn btn-success">Buat Invoice &amp; Bayar</a>
-                    {% endif %}
-                {% elif pengajuan.status == 'PAYMENT_PAID' or pengajuan.status == 'WAITING_APPROVAL' %}
-                    <p class="text-muted small mb-2">Pembayaran lunas. Menunggu proses approval.</p>
-                {% elif pengajuan.status == 'PAS_ISSUED' %}
-                    <p class="text-muted small mb-2">PAS telah diterbitkan. Lihat dan cetak kartu PAS Anda.</p>
-                    <a href="{% url 'pas:cetak_pas' pengajuan.pas_card.pk %}" class="btn btn-success">Lihat / Cetak PAS</a>
-                {% elif pengajuan.status == 'SCREENING_FAILED' %}
-                    <p class="text-muted small mb-2">Anda tidak lulus screening. Hubungi petugas terkait.</p>
-                {% elif pengajuan.status == 'REJECTED' %}
-                    <p class="text-muted small mb-2">Pengajuan ditolak. Hubungi petugas untuk informasi lebih lanjut.</p>
-                {% endif %}
+        {% if pengajuan.status == 'DRAFT' or pengajuan.status == 'REVISI_PEMOHON' %}
+            {% if not is_petugas %}
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <a href="{% url 'pas:edit_pengajuan' pengajuan.pk %}" class="btn btn-outline-secondary">Edit</a>
+                    <a href="{% url 'pas:submit_pengajuan' pengajuan.pk %}" class="btn btn-primary">Ajukan Pengajuan</a>
+                </div>
             </div>
-        </div>
+            {% endif %}
+        {% elif pengajuan.status == 'MENUNGGU_PEMBAYARAN' %}
+            {% if not is_petugas %}
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <p class="mb-2">Link pembayaran aktif.</p>
+                    <a href="{% url 'pembayaran:buat_invoice' pengajuan.pk %}" class="btn btn-success">Bayar Sekarang</a>
+                </div>
+            </div>
+            {% endif %}
+        {% elif pengajuan.status == 'DIAJUKAN' or pengajuan.status == 'VERIFIKASI_KOMERSIL' %}
+            {% if is_komersil %}
+            <a href="{% url 'pas:verifikasi_dokumen' pengajuan.pk %}" class="btn btn-primary">Verifikasi Dokumen</a>
+            {% endif %}
+        {% elif pengajuan.status == 'MENUNGGU_OPERASI' %}
+            {% if is_operasi %}
+            <a href="{% url 'pas:operasi_proses' pengajuan.pk %}" class="btn btn-primary">Proses Persetujuan</a>
+            {% endif %}
+        {% elif pengajuan.status == 'DIBAYAR' %}
+            {% if is_aoch %}
+            <form method="post" action="{% url 'pas:aoch_acknowledge' pengajuan.pk %}">
+                {% csrf_token %}
+                <button class="btn btn-success">Acknowledge (AOCH)</button>
+            </form>
+            {% endif %}
+        {% endif %}
     </div>
 </div>
-{% endif %}
-
-{% if pengajuan.riwayat_status.all %}
-<div class="card shadow-sm mt-3">
-    <div class="card-body">
-        <h6 class="card-title">Riwayat Status</h6>
-        <ul class="list-unstyled small mb-0">
-            {% for r in pengajuan.riwayat_status.all %}
-            <li><span class="badge text-bg-light">{{ r.get_status_display }}</span> — {{ r.created_at|date:"d M Y H:i" }}{% if r.catatan %} · {{ r.catatan }}{% endif %}</li>
-            {% endfor %}
-        </ul>
-    </div>
-</div>
-{% endif %}
 {% endblock %}

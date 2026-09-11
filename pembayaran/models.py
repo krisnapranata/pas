@@ -2,7 +2,7 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
-from pas.models import PengajuanPAS
+from pas.models import Pengajuan
 
 
 class PaymentMethod(models.Model):
@@ -53,7 +53,7 @@ class Invoice(models.Model):
 
     nomor_invoice = models.CharField(max_length=30, unique=True, blank=True)
     pengajuan = models.OneToOneField(
-        PengajuanPAS, on_delete=models.CASCADE, related_name="invoice"
+        Pengajuan, on_delete=models.CASCADE, related_name="invoice"
     )
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     biaya_admin = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -96,6 +96,14 @@ class Invoice(models.Model):
     def hitung_total(self):
         self.total = self.subtotal + self.biaya_admin + self.tax - self.discount
         return self.total
+
+    @property
+    def transaksi_menunggu_verifikasi(self):
+        """Transaksi PENDING yang sudah ada bukti bayar manual (menunggu verifikasi petugas)."""
+        return self.transaksi.filter(
+            status=PaymentTransaction.Status.PENDING,
+            manual__isnull=False,
+        ).order_by("-created_at").first()
 
 
 class PaymentTransaction(models.Model):
@@ -225,3 +233,8 @@ class PembayaranManual(models.Model):
 
     def __str__(self):
         return f"Manual - {self.transaksi}"
+
+    @property
+    def is_image(self):
+        name = (self.bukti.name or "").lower()
+        return name.endswith((".jpg", ".jpeg", ".png", ".gif", ".webp"))

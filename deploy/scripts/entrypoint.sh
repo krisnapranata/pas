@@ -11,7 +11,6 @@ python manage.py collectstatic --noinput
 echo "== Menjalankan seed (idempotent) =="
 python manage.py seed_master || true
 python manage.py seed_payment_methods || true
-python manage.py seed_workflow || true
 
 echo "== Menjalankan Gunicorn =="
 exec gunicorn config.wsgi:application \

@@ -7,7 +7,21 @@ from .models import User
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + (
-        ("Data Tambahan", {"fields": ("role", "phone")}),
+        (
+            "Data Tambahan",
+            {
+                "fields": (
+                    "role",
+                    "phone",
+                    "whatsapp",
+                    "nomor_identitas",
+                    "instansi",
+                    "alamat",
+                    "jabatan",
+                    "email_verified",
+                )
+            },
+        ),
     )
     list_display = ("username", "get_full_name", "role", "email", "is_active")
     list_filter = ("role", "is_staff", "is_active")

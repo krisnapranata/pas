@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Operasi{% endblock %}
+
+{% block content %}
+<h4 class="mb-1">Dashboard Operasi</h4>
+<p class="text-muted">Persetujuan operasional, penerbitan PAS, &amp; monitoring.</p>
+
+<div class="row g-3">
+    <div class="col-6 col-md-4 col-lg-2">
+        <div class="card card-stat text-bg-warning"><div class="card-body"><div class="small">Menunggu Persetujuan</div><div class="display-6">{{ menunggu_persetujuan }}</div></div></div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+        <div class="card card-stat text-bg-success"><div class="card-body"><div class="small">Disetujui</div><div class="display-6">{{ disetujui }}</div></div></div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+        <div class="card card-stat text-bg-danger"><div class="card-body"><div class="small">Ditolak</div><div class="display-6">{{ ditolak }}</div></div></div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+        <div class="card card-stat text-bg-info"><div class="card-body"><div class="small">Menunggu Pembayaran</div><div class="display-6">{{ menunggu_pembayaran }}</div></div></div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+        <div class="card card-stat text-bg-primary"><div class="card-body"><div class="small">Siap Terbit PAS</div><div class="display-6">{{ siap_terbit }}</div></div></div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+        <div class="card card-stat text-bg-secondary"><div class="card-body"><div class="small">PAS Diterbitkan</div><div class="display-6">{{ pas_terbit }}</div></div></div>
+    </div>
+</div>
+
+<div class="card shadow-sm mt-3">
+    <div class="card-body">
+        <h6 class="mb-2">Antrian Keputusan &amp; Penerbitan PAS</h6>
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead><tr><th>Nomor</th><th>Pemohon</th><th>Layanan</th><th>Tanggal</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                    {% for p in pengajuan %}
+                    <tr>
+                        <td>{{ p.nomor_pengajuan }}</td>
+                        <td>{{ p.pemohon.nama_lengkap }}</td>
+                        <td>{{ p.layanan.nama_layanan }}</td>
+                        <td>{{ p.tanggal_pelaksanaan|date:"d-m-Y" }}</td>
+                        <td><span class="badge text-bg-secondary">{{ p.get_status_display }}</span></td>
+                        <td>
+                            {% if p.status == 'DIBAYAR' or p.status == 'ACKNOWLEDGED_AOCH' %}
+                            <a href="{% url 'pas:operasi_proses' p.pk %}" class="btn btn-sm btn-primary">Terbitkan PAS</a>
+                            {% elif p.status == 'PAS_TERBIT' %}
+                            <a href="{% url 'pas:operasi_proses' p.pk %}" class="btn btn-sm btn-outline-secondary">Detail</a>
+                            {% else %}
+                            <a href="{% url 'pas:operasi_proses' p.pk %}" class="btn btn-sm btn-primary">Proses</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center text-muted py-3">Tidak ada antrian.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
