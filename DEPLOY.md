@@ -93,9 +93,14 @@ Service: `web` (Gunicorn), `nginx`, `db` (MariaDB), `redis` (cache/session),
 # di server utama
 git pull
 cp deploy/env.production.example .env.production   # isi kredensial production
-docker compose up -d --build
+docker compose --env-file .env.production up -d --build
 docker compose logs -f web    # pantau startup (migrate + collectstatic dijalankan otomatis)
 ```
+
+> **Akses via nginx-proxy-manager** (port 80/443 host sudah dipakai NPM):
+> - Nginx PAS tidak publish port; cukup di-attach ke network `proxy_default`.
+> - Tambah Proxy Host di NPM: domain `pas.lop-aoch.online` → forward ke
+>   container nginx PAS (mis. `pas-nginx-1`) port `80`, lalu SSL (opsional).
 
 ## Alur Kerja Harian
 

@@ -161,10 +161,12 @@ Settings dipilih otomatis: `DJANGO_ENV=production` → `config.settings.producti
 # Salin template env produksi
 cp deploy/env.production.example .env.production
 # Isi nilai nyata, lalu:
-docker compose up -d --build
+docker compose --env-file .env.production up -d --build
 ```
 
 Stack produksi: `web` (Django + Gunicorn) + `nginx` + `db` (MariaDB) + `redis` + `backup`. Entrypoint otomatis menjalankan `migrate`, `collectstatic`, dan seed master (idempotent).
+
+> **Akses di belakang nginx-proxy-manager**: nginx PAS tidak mem-publish port 80/443 (dipakai NPM). Tambah Proxy Host di NPM ke container nginx PAS (mis. `pas-nginx-1`) port `80` pada network `proxy_default`.
 
 ## Pembayaran
 

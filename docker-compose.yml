@@ -1,6 +1,11 @@
 # ============================================================
 # PAS Bandara — Production stack
 # Service: web (Django+Gunicorn), nginx, db (MariaDB), redis, backup
+#
+# Jalankan dengan:
+#   docker compose --env-file .env.production up -d --build
+# (--env-file dipakai agar interpolasi ${DB_*}, ${BACKUP_*} membaca
+#  file yang sama dengan env_file service, bukan .env development)
 # ============================================================
 
 services:
@@ -49,21 +54,23 @@ services:
       - media_data:/app/media
       - static_data:/app/staticfiles
     expose:
-      - "8000"
+      - "8005"
 
   nginx:
     image: nginx:1.27-alpine
     restart: unless-stopped
     depends_on:
       - web
-    ports:
-      - "${HTTP_PORT:-80}:80"
-      - "${HTTPS_PORT:-443}:443"
+    # Tidak publish 80/443 — akses via nginx-proxy-manager (network `proxy_default`)
+    expose:
+      - "80"
     volumes:
       - ./deploy/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       - static_data:/app/staticfiles:ro
       - media_data:/app/media:ro
-      - ./deploy/nginx/certs:/etc/nginx/certs:ro
+    networks:
+      - default
+      - proxy
 
   backup:
     build:
@@ -91,3 +98,8 @@ volumes:
   media_data:
   static_data:
   backup_data:
+
+networks:
+  proxy:
+    external: true
+    name: proxy_default

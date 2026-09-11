@@ -14,7 +14,7 @@ python manage.py seed_payment_methods || true
 
 echo "== Menjalankan Gunicorn =="
 exec gunicorn config.wsgi:application \
-    --bind 0.0.0.0:8000 \
+    --bind 0.0.0.0:8005 \
     --workers "${GUNICORN_WORKERS:-3}" \
     --threads "${GUNICORN_THREADS:-2}" \
     --timeout "${GUNICORN_TIMEOUT:-120}" \

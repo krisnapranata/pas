@@ -8,9 +8,8 @@ media/
 staticfiles/
 __pycache__/
 *.pyc
-Dockerfile
-docker-compose.yml
-deploy/
+deploy/nginx/certs/
+deploy/env.production.example
 *.log
 .DS_Store
 .idea/

@@ -31,7 +31,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        default-libmysqlclient-dev \
+        libmariadb3 \
         curl \
     && rm -rf /var/lib/apt/lists/* \
     && useradd -m -u 1000 appuser
@@ -54,6 +54,6 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 
 USER appuser
 
-EXPOSE 8000
+EXPOSE 8005
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
