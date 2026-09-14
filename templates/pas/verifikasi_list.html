@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rupiah %}
 
 {% block title %}Antrian Verifikasi{% endblock %}
 
@@ -17,7 +18,7 @@
                 <td>{{ p.pemohon.instansi|default:"-" }}</td>
                 <td>{{ p.layanan.nama_layanan }}</td>
                 <td>{{ p.jumlah_pendamping }}</td>
-                <td>Rp {{ p.total }}</td>
+                <td>Rp {{ p.total|rupiah }}</td>
                 <td><span class="badge text-bg-secondary">{{ p.get_status_display }}</span></td>
                 <td><a href="{% url 'pas:verifikasi_dokumen' p.pk %}" class="btn btn-sm btn-primary">Verifikasi</a></td>
             </tr>

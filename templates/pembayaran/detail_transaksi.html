@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rupiah %}
 
 {% block title %}Detail Transaksi{% endblock %}
 
@@ -14,7 +15,7 @@
                 <table class="table table-sm mt-3 mb-0">
                     <tr><th>Invoice</th><td>{{ transaksi.invoice.nomor_invoice }}</td></tr>
                     <tr><th>Metode</th><td>{{ transaksi.payment_method.name }} ({{ transaksi.payment_method.get_type_display }})</td></tr>
-                    <tr><th>Nominal</th><td class="fw-bold">Rp {{ transaksi.amount }}</td></tr>
+                    <tr><th>Nominal</th><td class="fw-bold">Rp {{ transaksi.amount|rupiah }}</td></tr>
                     {% if transaksi.expired_at %}
                     <tr><th>Jatuh Tempo</th><td>{{ transaksi.expired_at|date:"d M Y H:i" }}</td></tr>
                     {% endif %}

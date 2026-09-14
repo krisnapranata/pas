@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rupiah %}
 
 {% block title %}Dashboard Komersil{% endblock %}
 
@@ -34,7 +35,7 @@
                         <td>{{ p.pemohon.nama_lengkap }}</td>
                         <td>{{ p.layanan.nama_layanan }}</td>
                         <td>{{ p.jumlah_pendamping }}</td>
-                        <td>Rp {{ p.total }}</td>
+                        <td>Rp {{ p.total|rupiah }}</td>
                         <td><a href="{% url 'pas:verifikasi_dokumen' p.pk %}" class="btn btn-sm btn-primary">Verifikasi</a></td>
                     </tr>
                     {% empty %}
@@ -58,7 +59,7 @@
                         <td>{{ t.invoice.nomor_invoice }}</td>
                         <td>{{ t.invoice.pengajuan.pemohon.nama_lengkap }}</td>
                         <td>{{ t.payment_method.name }}</td>
-                        <td>Rp {{ t.amount }}</td>
+                        <td>Rp {{ t.amount|rupiah }}</td>
                         <td><span class="badge text-bg-secondary">{{ t.get_status_display }}</span></td>
                         <td><a href="{% url 'pembayaran:verifikasi_manual' t.pk %}" class="btn btn-sm btn-primary">Verifikasi</a></td>
                     </tr>

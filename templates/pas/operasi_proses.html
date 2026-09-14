@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rupiah %}
 
 {% block title %}Proses Persetujuan Operasi{% endblock %}
 
@@ -16,7 +17,7 @@
                     <tr><th>Tanggal</th><td>{{ pengajuan.tanggal_pelaksanaan|date:"d M Y" }}</td></tr>
                     <tr><th>Jumlah Pendamping</th><td>{{ pengajuan.jumlah_pendamping }}</td></tr>
                     <tr><th>Tujuan/Instansi</th><td>{{ pengajuan.tujuan|default:"-" }}</td></tr>
-                    <tr class="fw-bold"><th>TOTAL</th><td>Rp {{ pengajuan.total }}</td></tr>
+                    <tr class="fw-bold"><th>TOTAL</th><td>Rp {{ pengajuan.total|rupiah }}</td></tr>
                 </table>
             </div>
         </div>

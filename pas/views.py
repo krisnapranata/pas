@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+from accounts.templatetags.rupiah import format_rupiah
 from audit.models import log_action
 from notifikasi.services import notify, notify_role
 from pembayaran.views import get_or_create_invoice
@@ -395,7 +396,7 @@ def operasi_proses(request, pk):
                 notify(
                     pengajuan.pemohon,
                     "Pengajuan disetujui Operasi",
-                    f"Total pembayaran: Rp{pengajuan.total:,.0f}. Silakan lakukan pembayaran.",
+                    f"Total pembayaran: Rp{format_rupiah(pengajuan.total)}. Silakan lakukan pembayaran.",
                     url=f"/pas/pengajuan/{pk}/",
                     pengajuan=pengajuan,
                 )

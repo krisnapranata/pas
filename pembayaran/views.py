@@ -13,6 +13,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
+from accounts.templatetags.rupiah import format_rupiah
 from audit.models import log_action
 from notifikasi.services import notify_role
 from pas.models import Pengajuan
@@ -193,7 +194,7 @@ def upload_bukti(request, pk):
             "KOMERSIL",
             "Bukti pembayaran diunggah",
             f"{invoice.pengajuan.pemohon.nama_lengkap} mengunggah bukti pembayaran untuk "
-            f"{invoice.nomor_invoice} (Rp {transaksi.amount:,.0f}). Menunggu verifikasi.",
+            f"{invoice.nomor_invoice} (Rp {format_rupiah(transaksi.amount)}). Menunggu verifikasi.",
             url=f"/pembayaran/verifikasi/{transaksi.pk}/",
             pengajuan=invoice.pengajuan,
         )

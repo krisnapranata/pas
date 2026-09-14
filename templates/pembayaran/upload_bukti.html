@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rupiah %}
 
 {% block title %}Upload Bukti Pembayaran{% endblock %}
 
@@ -13,14 +14,14 @@
         <div class="card shadow-sm">
             <div class="card-body p-4">
                 <h5>{% if transaksi.manual %}Ganti Bukti Pembayaran{% else %}Upload Bukti Pembayaran{% endif %}</h5>
-                <p class="text-muted small">Transaksi {{ transaksi.merchant_reference }} · Rp {{ transaksi.amount }}</p>
+                <p class="text-muted small">Transaksi {{ transaksi.merchant_reference }} · Rp {{ transaksi.amount|rupiah }}</p>
 
                 {% if transaksi.payment_method.configuration.norek %}
                 <div class="card shadow-sm mb-3">
                     <div class="card-body">
                         <h6 class="mb-3">Cara Transfer</h6>
                         <ol class="small mb-3">
-                            <li>Transfer sebesar <strong>Rp {{ transaksi.amount }}</strong> ke rekening di bawah ini.</li>
+                            <li>Transfer sebesar <strong>Rp {{ transaksi.amount|rupiah }}</strong> ke rekening di bawah ini.</li>
                             <li>Simpan/capture bukti transfer.</li>
                             <li>Unggah bukti transfer pada formulir di bawah.</li>
                         </ol>

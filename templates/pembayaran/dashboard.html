@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rupiah %}
 
 {% block title %}Dashboard Pembayaran{% endblock %}
 
@@ -30,7 +31,7 @@
         <tr>
             <td>{{ t.invoice.nomor_invoice }}</td>
             <td>{{ t.payment_method.name }}{% if t.va_number %} · {{ t.va_number }}{% endif %}</td>
-            <td>Rp {{ t.amount }}</td>
+            <td>Rp {{ t.amount|rupiah }}</td>
             <td><span class="badge text-bg-{% if t.status == 'PAID' %}success{% elif t.status == 'FAILED' %}danger{% else %}secondary{% endif %}">{{ t.get_status_display }}</span></td>
             <td>
                 {% if t.payment_method.type == 'MANUAL_TRANSFER' or t.payment_method.type == 'CASH' %}

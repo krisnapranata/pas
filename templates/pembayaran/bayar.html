@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rupiah %}
 
 {% block title %}Bayar Invoice{% endblock %}
 
@@ -11,10 +12,10 @@
                 <table class="table table-sm">
                     <tr><th>Pengajuan</th><td>{{ invoice.pengajuan.nomor_pengajuan }}</td></tr>
                     <tr><th>Layanan</th><td>{{ invoice.pengajuan.layanan.nama_layanan }}</td></tr>
-                    <tr><th>Subtotal</th><td>Rp {{ invoice.subtotal }}</td></tr>
-                    <tr><th>Biaya Admin</th><td>Rp {{ invoice.biaya_admin }}</td></tr>
-                    <tr><th>Discount</th><td>Rp {{ invoice.discount }}</td></tr>
-                    <tr class="fw-bold"><th>TOTAL</th><td>Rp {{ invoice.total }}</td></tr>
+                    <tr><th>Subtotal</th><td>Rp {{ invoice.subtotal|rupiah }}</td></tr>
+                    <tr><th>Biaya Admin</th><td>Rp {{ invoice.biaya_admin|rupiah }}</td></tr>
+                    <tr><th>Discount</th><td>Rp {{ invoice.discount|rupiah }}</td></tr>
+                    <tr class="fw-bold"><th>TOTAL</th><td>Rp {{ invoice.total|rupiah }}</td></tr>
                 </table>
             </div>
         </div>

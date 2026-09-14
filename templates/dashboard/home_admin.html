@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rupiah %}
 
 {% block title %}Dashboard Administrator{% endblock %}
 
@@ -17,7 +18,7 @@
         <div class="card card-stat text-bg-info"><div class="card-body"><div class="small">Menunggu Operasi</div><div class="display-6">{{ menunggu_operasi }}</div></div></div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card card-stat text-bg-success"><div class="card-body"><div class="small">Pemasukan (PAID)</div><div class="display-6">Rp {{ total_pemasukan }}</div></div></div>
+        <div class="card card-stat text-bg-success"><div class="card-body"><div class="small">Pemasukan (PAID)</div><div class="display-6">Rp {{ total_pemasukan|rupiah }}</div></div></div>
     </div>
 </div>
 

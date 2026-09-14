@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rupiah %}
 
 {% block title %}Invoice Saya{% endblock %}
 
@@ -20,7 +21,7 @@
             <td>{{ inv.nomor_invoice }}</td>
             <td>{{ inv.pengajuan.nomor_pengajuan }}</td>
             <td>{{ inv.pengajuan.layanan.nama_layanan }}</td>
-            <td>Rp {{ inv.total }}</td>
+            <td>Rp {{ inv.total|rupiah }}</td>
             <td>
                 {% if inv.transaksi_menunggu_verifikasi %}
                 <span class="badge text-bg-warning">Menunggu Verifikasi</span>

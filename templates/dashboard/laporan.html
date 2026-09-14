@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rupiah %}
 
 {% block title %}Laporan{% endblock %}
 
@@ -45,7 +46,7 @@
                 <td>{{ p.layanan.nama_layanan }}</td>
                 <td>{{ p.tanggal_pelaksanaan|date:"d M Y" }}</td>
                 <td>{{ p.jumlah_pendamping }}</td>
-                <td>Rp {{ p.total }}</td>
+                <td>Rp {{ p.total|rupiah }}</td>
                 <td>{{ p.get_status_display }}</td>
             </tr>
             {% empty %}
