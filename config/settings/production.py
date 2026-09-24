@@ -20,6 +20,17 @@ ALLOWED_HOSTS = [
     if h.strip()
 ]
 
+# Static files di-hash (pas-theme.<hash>.css) agar browser otomatis mengambil
+# versi baru setiap deploy. Nginx boleh cache lama (immutable) dengan aman.
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage",
+    },
+}
+
 # Di belakang reverse proxy (Nginx), hormati header HTTPS
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 

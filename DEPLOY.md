@@ -68,6 +68,11 @@ python manage.py collectstatic --noinput
 sudo systemctl restart pas-gunicorn
 ```
 
+> Agar cache static ikut ter-hash (lihat bagian **Cache Static**), jalankan
+> staging dengan `DJANGO_ENV=production` (atau `DJANGO_SETTINGS_MODULE=config.settings.production`).
+> Dengan `DEBUG=True`, nama file static tidak di-hash sehingga browser bisa
+> menyimpan CSS/JS lama setelah deploy.
+
 ## 3. Production (server utama, via Docker)
 
 Struktur deployment tersedia di root & `deploy/`:
@@ -106,9 +111,28 @@ docker compose logs -f web    # pantau startup (migrate + collectstatic dijalank
 
 ```
 laptop (dev)       → edit → runserver → tes → git commit → git push
-server staging     → git pull → migrate → tes
+server staging     → git pull → migrate → collectstatic → restart gunicorn
 server production  → git pull → docker compose up -d --build
 ```
+
+## Cache Static (kenapa CSS/JS tidak berubah setelah deploy)
+
+Nginx menyajikan `/static/` dengan `expires 30d; immutable` (lihat
+`deploy/nginx/default.conf`). Supaya perubahan CSS/JS langsung terpakai tanpa
+`Ctrl+Shift+R`, production memakai `ManifestStaticFilesStorage` sehingga nama
+file diberi hash konten (`pas-theme.<hash>.css`). Setiap kali isi file berubah,
+hash dan URL-nya ikut berubah — browser otomatis mengambil file baru, dan cache
+lama tetap aman.
+
+Konsekuensi yang perlu diingat:
+
+- **Wajib** menjalankan `collectstatic` setiap deploy (sudah otomatis di
+  entrypoint Docker: `deploy/scripts/entrypoint.sh`). Staging non-docker harus
+  `python manage.py collectstatic --noinput` sebelum restart gunicorn.
+- Jangan mengedit file di `staticfiles/` secara manual — itu hasil generate dan
+  bisa terhapus/tertimpa.
+- Jika `collectstatic` gagal karena file `.map` yang tidak ada, hapus komentar
+  `sourceMappingURL` di file vendor terkait (sudah dilakukan untuk Bootstrap).
 
 ## Catatan Keamanan
 
