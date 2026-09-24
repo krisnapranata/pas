@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import redirect, render
 from django.utils.encoding import force_str
-from django.utils.http import urlsafe_base64_decode
+from django.utils.http import url_has_allowed_host_and_scheme, urlsafe_base64_decode
 
 from .email_utils import send_email_confirmation
 from .forms import LoginForm, PemohonRegistrationForm, ProfilForm
@@ -12,12 +12,25 @@ from .models import User
 
 
 def home(request):
-    return redirect("accounts:login")
+    """Halaman awal: 4 pilihan layanan."""
+    if request.user.is_authenticated:
+        return redirect("dashboard:home")
+    return render(request, "landing.html")
+
+
+def _safe_next(request):
+    next_url = request.POST.get("next") or request.GET.get("next") or ""
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        return next_url
+    return None
 
 
 def login_view(request):
     if request.user.is_authenticated:
         return redirect("dashboard:home")
+    next_url = _safe_next(request)
     form = LoginForm(data=request.POST or None)
     if request.method == "POST" and form.is_valid():
         user = form.get_user()
@@ -25,8 +38,8 @@ def login_view(request):
             messages.error(request, "Akun belum aktif. Periksa email Anda untuk konfirmasi pendaftaran.")
             return redirect("accounts:login")
         login(request, user)
-        return redirect("dashboard:home")
-    return render(request, "accounts/login.html", {"form": form})
+        return redirect(next_url or "dashboard:home")
+    return render(request, "accounts/login.html", {"form": form, "next": next_url or ""})
 
 
 def register_view(request):

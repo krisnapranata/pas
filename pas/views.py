@@ -5,7 +5,8 @@ from django.utils import timezone
 
 from accounts.templatetags.rupiah import format_rupiah
 from audit.models import log_action
-from notifikasi.services import notify, notify_role
+from notifikasi.services import notify_pemohon, notify_role
+from pembayaran.models import Invoice
 from pembayaran.views import get_or_create_invoice
 
 from .forms import PengajuanForm
@@ -56,19 +57,73 @@ def _set_status(pengajuan, status, user, catatan=""):
     )
 
 
-def _blacklist_hit(pemohon):
-    nama = (pemohon.nama_lengkap or "").strip()
+def _blacklist_hit(nama, instansi):
+    nama = (nama or "").strip()
     if nama:
         hit = DaftarHitam.objects.filter(
             aktif=True, tipe=DaftarHitam.Tipe.ORANG, nama__iexact=nama
         ).first()
         if hit:
             return hit
-    if pemohon.instansi:
+    if instansi:
         return DaftarHitam.objects.filter(
-            aktif=True, tipe=DaftarHitam.Tipe.PERUSAHAAN, nama__iexact=pemohon.instansi.strip()
+            aktif=True, tipe=DaftarHitam.Tipe.PERUSAHAAN, nama__iexact=instansi.strip()
         ).first()
     return None
+
+
+def _normalisasi_hp(value):
+    return "".join(ch for ch in str(value or "") if ch.isdigit())
+
+
+def _kontak_cocok(pengajuan, kontak):
+    """Cocokkan kontak yang diisi dengan data pemohon pengajuan."""
+    kontak = (kontak or "").strip().lower()
+    if not kontak:
+        return False
+    kandidat = [pengajuan.pemohon_email, pengajuan.pemohon_no_hp]
+    if pengajuan.pemohon_id:
+        kandidat += [
+            pengajuan.pemohon.email,
+            pengajuan.pemohon.phone,
+            pengajuan.pemohon.username,
+        ]
+    kandidat = [k for k in kandidat if k]
+    if any(str(k).strip().lower() == kontak for k in kandidat):
+        return True
+    kontak_digit = _normalisasi_hp(kontak)
+    if not kontak_digit:
+        return False
+    return any(kontak_digit == _normalisasi_hp(k) for k in kandidat)
+
+
+def _ajukan_pengajuan(pengajuan, request):
+    """Ubah status ke DIAJUKAN (atau tolak bila masuk daftar hitam)."""
+    user = request.user if request.user.is_authenticated else None
+    hit = _blacklist_hit(pengajuan.nama_pemohon, pengajuan.instansi_pemohon)
+    if hit:
+        alasan = f"Terdaftar dalam daftar hitam: {hit.nama}. {hit.alasan}".strip()
+        _set_status(
+            pengajuan, Pengajuan.Status.DITOLAK_OPERASI, user, catatan=alasan
+        )
+        notify_pemohon(
+            pengajuan,
+            "Pengajuan ditolak",
+            alasan,
+            url=f"/pas/lacak/{pengajuan.pk}/",
+        )
+        log_action(request, "TOLAK_BLACKLIST", "Pengajuan", pengajuan.pk, new_value=hit.nama)
+        return False
+    _set_status(pengajuan, Pengajuan.Status.DIAJUKAN, user)
+    notify_role(
+        "KOMERSIL",
+        "Pengajuan baru",
+        f"Pengajuan {pengajuan.nomor_pengajuan} menunggu verifikasi.",
+        url=f"/pas/verifikasi/{pengajuan.pk}/",
+        pengajuan=pengajuan,
+    )
+    log_action(request, "SUBMIT_PENGAJUAN", "Pengajuan", pengajuan.pk)
+    return True
 
 
 def _simpan_pendamping(pengajuan, jumlah_pendamping, post, files):
@@ -112,13 +167,14 @@ def daftar_pengajuan(request):
     return render(request, "pas/daftar_pengajuan.html", {"pengajuan": query})
 
 
-@login_required
 def buat_pengajuan(request):
+    """Form pengajuan publik — Pemohon tidak perlu login."""
+    user = request.user if request.user.is_authenticated else None
     if request.method == "POST":
-        form = PengajuanForm(request.POST)
+        form = PengajuanForm(request.POST, user=user)
         if form.is_valid():
             pengajuan = form.save(commit=False)
-            pengajuan.pemohon = request.user
+            pengajuan.pemohon = user
             pengajuan.status = Pengajuan.Status.DRAFT
             pengajuan.simpan_snapshot_tarif()
             pengajuan.save()
@@ -133,25 +189,39 @@ def buat_pengajuan(request):
                 pengajuan.nomor_pengajuan = pengajuan._generate_nomor()
                 pengajuan.save(update_fields=["nomor_pengajuan"])
                 log_action(request, "BUAT_PENGAJUAN", "Pengajuan", pengajuan.pk)
+                if user is None:
+                    # Pemohon publik: langsung ajukan tanpa perlu login.
+                    _ajukan_pengajuan(pengajuan, request)
+                    request.session["sukses_pengajuan"] = pengajuan.pk
+                    ids = request.session.get("lacak_pengajuan", [])
+                    if pengajuan.pk not in ids:
+                        ids.append(pengajuan.pk)
+                    request.session["lacak_pengajuan"] = ids[-20:]
+                    return redirect("pas:pengajuan_sukses")
                 messages.success(
                     request,
                     "Draft pengajuan dibuat. Silakan ajukan untuk diproses.",
                 )
                 return redirect("pas:detail_pengajuan", pk=pengajuan.pk)
     else:
-        form = PengajuanForm(
-            initial={
-                "pic_nama": request.user.nama_lengkap,
-                "pic_jabatan": request.user.jabatan,
-                "pic_nomor_identitas": request.user.nomor_identitas,
-                "pic_no_hp": request.user.phone,
-                "pic_email": request.user.email,
+        initial = {}
+        if user is not None:
+            initial = {
+                "pic_nama": user.nama_lengkap,
+                "pic_jabatan": user.jabatan,
+                "pic_nomor_identitas": user.nomor_identitas,
+                "pic_no_hp": user.phone,
+                "pic_email": user.email,
             }
-        )
+        form = PengajuanForm(user=user, initial=initial)
     return render(
         request,
         "pas/buat_pengajuan.html",
-        {"form": form, "pendamping_names": []},
+        {
+            "form": form,
+            "pendamping_names": [],
+            "publik": user is None,
+        },
     )
 
 
@@ -162,7 +232,7 @@ def edit_pengajuan(request, pk):
         messages.error(request, "Pengajuan tidak dapat diubah pada status ini.")
         return redirect("pas:detail_pengajuan", pk=pk)
     if request.method == "POST":
-        form = PengajuanForm(request.POST, instance=pengajuan)
+        form = PengajuanForm(request.POST, instance=pengajuan, user=request.user)
         if form.is_valid():
             pengajuan = form.save(commit=False)
             pengajuan.simpan_snapshot_tarif()
@@ -178,7 +248,7 @@ def edit_pengajuan(request, pk):
                 messages.success(request, "Pengajuan diperbarui.")
                 return redirect("pas:detail_pengajuan", pk=pengajuan.pk)
     else:
-        form = PengajuanForm(instance=pengajuan)
+        form = PengajuanForm(instance=pengajuan, user=request.user)
     return render(
         request,
         "pas/buat_pengajuan.html",
@@ -195,7 +265,18 @@ def detail_pengajuan(request, pk):
     pengajuan = get_object_or_404(
         Pengajuan.objects.select_related("layanan", "pemohon"), pk=pk
     )
-    if not (_is_petugas(request.user) or pengajuan.pemohon == request.user):
+    boleh_akses = _is_petugas(request.user) or (
+        request.user.is_authenticated and pengajuan.pemohon_id == request.user.id
+    )
+    if not boleh_akses:
+        if pk in request.session.get("lacak_pengajuan", []):
+            return redirect("pas:lacak_detail", pk=pk)
+        if not request.user.is_authenticated:
+            messages.info(
+                request,
+                "Masukkan nomor pengajuan dan kontak untuk melihat status pengajuan.",
+            )
+            return redirect("pas:lacak_pengajuan")
         return redirect("pas:daftar_pengajuan")
 
     pendamping = pengajuan.pendamping.all()
@@ -229,32 +310,53 @@ def submit_pengajuan(request, pk):
         )
         return redirect("pas:edit_pengajuan", pk=pk)
 
-    hit = _blacklist_hit(request.user)
-    if hit:
-        alasan = f"Terdaftar dalam daftar hitam: {hit.nama}. {hit.alasan}".strip()
-        _set_status(pengajuan, Pengajuan.Status.DITOLAK_OPERASI, request.user, catatan=alasan)
-        notify(
-            request.user,
-            "Pengajuan ditolak",
-            alasan,
-            url=f"/pas/pengajuan/{pk}/",
-            pengajuan=pengajuan,
-        )
-        log_action(request, "TOLAK_BLACKLIST", "Pengajuan", pk, new_value=hit.nama)
+    if _ajukan_pengajuan(pengajuan, request):
+        messages.success(request, "Pengajuan berhasil diajukan.")
+    else:
         messages.error(request, "Pengajuan ditolak karena terdaftar dalam daftar hitam.")
-        return redirect("pas:detail_pengajuan", pk=pk)
-
-    _set_status(pengajuan, Pengajuan.Status.DIAJUKAN, request.user)
-    notify_role(
-        "KOMERSIL",
-        "Pengajuan baru",
-        f"Pengajuan {pengajuan.nomor_pengajuan} menunggu verifikasi.",
-        url=f"/pas/verifikasi/{pk}/",
-        pengajuan=pengajuan,
-    )
-    log_action(request, "SUBMIT_PENGAJUAN", "Pengajuan", pk)
-    messages.success(request, "Pengajuan berhasil diajukan.")
     return redirect("pas:detail_pengajuan", pk=pk)
+
+
+def pengajuan_sukses(request):
+    """Halaman sukses setelah pemohon publik mengirim pengajuan."""
+    pk = request.session.get("sukses_pengajuan")
+    pengajuan = Pengajuan.objects.select_related("layanan").filter(pk=pk).first() if pk else None
+    return render(request, "pas/pengajuan_sukses.html", {"pengajuan": pengajuan})
+
+
+def lacak_pengajuan(request):
+    """Lacak status pengajuan dengan nomor + kontak (tanpa akun)."""
+    error = ""
+    nomor = ""
+    if request.method == "POST":
+        nomor = (request.POST.get("nomor_pengajuan") or "").strip()
+        kontak = (request.POST.get("kontak") or "").strip()
+        pengajuan = Pengajuan.objects.filter(nomor_pengajuan__iexact=nomor).first()
+        if pengajuan and _kontak_cocok(pengajuan, kontak):
+            ids = request.session.get("lacak_pengajuan", [])
+            if pengajuan.pk not in ids:
+                ids.append(pengajuan.pk)
+            request.session["lacak_pengajuan"] = ids[-20:]
+            return redirect("pas:lacak_detail", pk=pengajuan.pk)
+        error = "Nomor pengajuan dan kontak tidak cocok. Periksa kembali data Anda."
+    return render(request, "pas/lacak.html", {"error": error, "nomor": nomor})
+
+
+def lacak_detail(request, pk):
+    if pk not in request.session.get("lacak_pengajuan", []):
+        messages.info(request, "Masukkan nomor pengajuan dan kontak untuk melihat status.")
+        return redirect("pas:lacak_pengajuan")
+    pengajuan = get_object_or_404(Pengajuan.objects.select_related("layanan"), pk=pk)
+    invoice = Invoice.objects.filter(pengajuan=pengajuan).first()
+    return render(
+        request,
+        "pas/lacak_detail.html",
+        {
+            "pengajuan": pengajuan,
+            "timeline": _build_timeline(pengajuan.status),
+            "invoice": invoice,
+        },
+    )
 
 
 # ---------- Komersil ----------
@@ -294,24 +396,22 @@ def verifikasi_dokumen(request, pk):
         catatan = request.POST.get("catatan", "")
         if aksi == "revisi":
             _set_status(pengajuan, Pengajuan.Status.REVISI_PEMOHON, request.user, catatan=catatan)
-            notify(
-                pengajuan.pemohon,
+            notify_pemohon(
+                pengajuan,
                 "Pengajuan perlu revisi",
                 catatan or "Data/dokumen perlu diperbaiki.",
-                url=f"/pas/pengajuan/{pk}/",
-                pengajuan=pengajuan,
+                url=f"/pas/lacak/{pk}/",
             )
             log_action(request, "MINTA_REVISI", "Pengajuan", pk, new_value=catatan)
             messages.warning(request, "Pemohon diminta melakukan revisi.")
         elif aksi == "setujui":
             _set_status(pengajuan, Pengajuan.Status.DISETUJUI_KOMERSIL, request.user, catatan=catatan)
             _set_status(pengajuan, Pengajuan.Status.MENUNGGU_OPERASI, request.user, catatan=catatan)
-            notify(
-                pengajuan.pemohon,
+            notify_pemohon(
+                pengajuan,
                 "Data lengkap",
                 "Data pengajuan Anda dinyatakan lengkap oleh Komersil dan menunggu persetujuan Operasi.",
-                url=f"/pas/pengajuan/{pk}/",
-                pengajuan=pengajuan,
+                url=f"/pas/lacak/{pk}/",
             )
             notify_role(
                 "OPERASI",
@@ -366,26 +466,24 @@ def operasi_proses(request, pk):
                 messages.error(request, "Alasan penolakan wajib diisi.")
                 return redirect("pas:operasi_proses", pk=pk)
             _set_status(pengajuan, Pengajuan.Status.DITOLAK_OPERASI, request.user, catatan=alasan)
-            notify(
-                pengajuan.pemohon,
+            notify_pemohon(
+                pengajuan,
                 "Pengajuan ditolak Operasi",
                 f"Alasan: {alasan}",
-                url=f"/pas/pengajuan/{pk}/",
-                pengajuan=pengajuan,
+                url=f"/pas/lacak/{pk}/",
             )
             log_action(request, "TOLAK_OPERASI", "Pengajuan", pk, new_value=alasan)
             messages.warning(request, "Pengajuan ditolak.")
         elif aksi == "SETUJUI":
-            hit = _blacklist_hit(pengajuan.pemohon)
+            hit = _blacklist_hit(pengajuan.nama_pemohon, pengajuan.instansi_pemohon)
             if hit:
                 alasan = f"Terdaftar dalam daftar hitam: {hit.nama}. {hit.alasan}".strip()
                 _set_status(pengajuan, Pengajuan.Status.DITOLAK_OPERASI, request.user, catatan=alasan)
-                notify(
-                    pengajuan.pemohon,
+                notify_pemohon(
+                    pengajuan,
                     "Pengajuan ditolak",
                     alasan,
-                    url=f"/pas/pengajuan/{pk}/",
-                    pengajuan=pengajuan,
+                    url=f"/pas/lacak/{pk}/",
                 )
                 log_action(request, "TOLAK_BLACKLIST", "Pengajuan", pk, new_value=hit.nama)
                 messages.error(request, "Pengajuan ditolak karena daftar hitam.")
@@ -393,19 +491,17 @@ def operasi_proses(request, pk):
                 _set_status(pengajuan, Pengajuan.Status.DISETUJUI_OPERASI, request.user)
                 _set_status(pengajuan, Pengajuan.Status.MENUNGGU_PEMBAYARAN, request.user)
                 get_or_create_invoice(pengajuan)
-                notify(
-                    pengajuan.pemohon,
+                notify_pemohon(
+                    pengajuan,
                     "Pengajuan disetujui Operasi",
                     f"Total pembayaran: Rp{format_rupiah(pengajuan.total)}. Silakan lakukan pembayaran.",
-                    url=f"/pas/pengajuan/{pk}/",
-                    pengajuan=pengajuan,
+                    url=f"/pas/lacak/{pk}/",
                 )
                 notify_role(
                     "AOCH",
                     "Pengajuan disetujui",
                     f"Pengajuan {pengajuan.nomor_pengajuan} disetujui Operasi.",
-                    url=f"/pas/pengajuan/{pk}/",
-                    pengajuan=pengajuan,
+                    url=f"/pas/lacak/{pk}/",
                 )
                 log_action(request, "SETUJUI_OPERASI", "Pengajuan", pk)
                 messages.success(request, "Pengajuan disetujui. Link pembayaran aktif.")
@@ -427,13 +523,12 @@ def terbitkan_pas(request, pk):
         Pengajuan.Status.ACKNOWLEDGED_AOCH,
     ):
         _set_status(pengajuan, Pengajuan.Status.PAS_TERBIT, request.user)
-        notify(
-            pengajuan.pemohon,
+        notify_pemohon(
+            pengajuan,
             "PAS diterbitkan",
             f"PAS untuk pengajuan {pengajuan.nomor_pengajuan} telah diterbitkan. "
             "Silakan diambil di Operasi.",
-            url=f"/pas/pengajuan/{pk}/",
-            pengajuan=pengajuan,
+            url=f"/pas/lacak/{pk}/",
         )
         notify_role(
             "AOCH",
@@ -462,12 +557,11 @@ def tandai_pelaksanaan(request, pk):
             messages.success(request, "Layanan ditandai dilaksanakan.")
         elif aksi == "SELESAI" and pengajuan.status == Pengajuan.Status.DILAKSANAKAN:
             _set_status(pengajuan, Pengajuan.Status.SELESAI, request.user)
-            notify(
-                pengajuan.pemohon,
+            notify_pemohon(
+                pengajuan,
                 "Layanan selesai",
                 f"Layanan {pengajuan.layanan.nama_layanan} telah selesai dilaksanakan.",
-                url=f"/pas/pengajuan/{pk}/",
-                pengajuan=pengajuan,
+                url=f"/pas/lacak/{pk}/",
             )
             messages.success(request, "Pengajuan ditandai selesai.")
         return redirect("pas:operasi_proses", pk=pk)

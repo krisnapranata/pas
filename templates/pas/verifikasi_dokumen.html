@@ -4,7 +4,7 @@
 
 {% block content %}
 <h4 class="mb-1">Verifikasi Dokumen</h4>
-<p class="text-muted">{{ pengajuan.nomor_pengajuan }} — {{ pengajuan.pemohon.nama_lengkap }} ({{ pengajuan.layanan.nama_layanan }})</p>
+<p class="text-muted">{{ pengajuan.nomor_pengajuan }} — {{ pengajuan.nama_pemohon }} ({{ pengajuan.layanan.nama_layanan }})</p>
 
 <form method="post">
     {% csrf_token %}
@@ -12,8 +12,9 @@
         <div class="card-body">
             <h6>Data Pemohon & PIC</h6>
             <table class="table table-sm">
-                <tr><th style="width:200px">Nama Pemohon</th><td>{{ pengajuan.pemohon.nama_lengkap }}</td></tr>
-                <tr><th>Instansi/Perusahaan</th><td>{{ pengajuan.pemohon.instansi|default:"-" }}</td></tr>
+                <tr><th style="width:200px">Nama Pemohon</th><td>{{ pengajuan.nama_pemohon }}</td></tr>
+                <tr><th>Instansi/Perusahaan</th><td>{{ pengajuan.instansi_pemohon|default:"-" }}</td></tr>
+                <tr><th>No. HP</th><td>{{ pengajuan.kontak_pemohon|default:"-" }}</td></tr>
                 <tr><th>Nama PIC</th><td>{{ pengajuan.pic_nama|default:"-" }}</td></tr>
                 <tr><th>Jabatan PIC</th><td>{{ pengajuan.pic_jabatan|default:"-" }}</td></tr>
                 <tr><th>No. HP PIC</th><td>{{ pengajuan.pic_no_hp|default:"-" }}</td></tr>

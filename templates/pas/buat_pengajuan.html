@@ -8,9 +8,40 @@
         <div class="card shadow-sm">
             <div class="card-body">
                 <h5 class="card-title mb-3">{% if pengajuan %}Edit Pengajuan{% else %}Buat Pengajuan Layanan{% endif %}</h5>
+                {% if publik %}
+                <div class="alert alert-info">
+                    <strong>Tanpa login.</strong> Isi data di bawah ini, lalu kirim. Pengajuan langsung masuk
+                    verifikasi Komersil. Simpan <strong>nomor pengajuan</strong> dan kontak Anda untuk melacak status.
+                </div>
+                {% endif %}
                 <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
-                    <h6 class="mt-2">Data Layanan</h6>
+                    <h6 class="mt-2">Data Pemohon</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nama Pemohon <span class="text-danger">*</span></label>
+                            {{ form.pemohon_nama }}
+                            {{ form.pemohon_nama.errors }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Instansi/Perusahaan</label>
+                            {{ form.pemohon_instansi }}
+                            {{ form.pemohon_instansi.errors }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">No. HP Pemohon <span class="text-danger">*</span></label>
+                            {{ form.pemohon_no_hp }}
+                            {{ form.pemohon_no_hp.errors }}
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Email Pemohon <span class="text-danger">*</span></label>
+                            {{ form.pemohon_email }}
+                            {{ form.pemohon_email.errors }}
+                            <div class="form-text">Dipakai untuk mengirim kabar status pengajuan.</div>
+                        </div>
+                    </div>
+
+                    <h6 class="mt-4">Data Layanan</h6>
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label">Layanan</label>
@@ -83,8 +114,12 @@
                     <p class="text-muted small">Jumlah slot mengikuti jumlah pendamping. Lengkapi nama & dokumen identitas tiap pendamping.</p>
                     <div id="pendamping-area" class="mb-3"></div>
 
-                    <button type="submit" class="btn btn-primary">Simpan Draft</button>
+                    <button type="submit" class="btn btn-primary">{% if publik %}Kirim Pengajuan{% else %}Simpan Draft{% endif %}</button>
+                    {% if publik %}
+                    <a href="{% url 'accounts:home' %}" class="btn btn-outline-secondary">Batal</a>
+                    {% else %}
                     <a href="{% url 'pas:daftar_pengajuan' %}" class="btn btn-outline-secondary">Batal</a>
+                    {% endif %}
                 </form>
             </div>
         </div>

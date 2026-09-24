@@ -16,7 +16,7 @@
                 <h5>Verifikasi Pembayaran Manual</h5>
                 <table class="table table-sm">
                     <tr><th>Transaksi</th><td>{{ transaksi.merchant_reference }}</td></tr>
-                    <tr><th>Invoice</th><td>{{ transaksi.invoice.nomor_invoice }} ({{ transaksi.invoice.pengajuan.pemohon.get_full_name|default:transaksi.invoice.pengajuan.pemohon.username }})</td></tr>
+                    <tr><th>Invoice</th><td>{{ transaksi.invoice.nomor_invoice }} ({{ transaksi.invoice.pengajuan.nama_pemohon }})</td></tr>
                     <tr><th>Nominal</th><td>Rp {{ transaksi.amount|rupiah }}</td></tr>
                     <tr><th>Status</th><td>{{ transaksi.get_status_display }}</td></tr>
                 </table>

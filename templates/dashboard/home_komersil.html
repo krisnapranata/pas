@@ -32,7 +32,7 @@
                     {% for p in pengajuan %}
                     <tr>
                         <td>{{ p.nomor_pengajuan }}</td>
-                        <td>{{ p.pemohon.nama_lengkap }}</td>
+                        <td>{{ p.nama_pemohon }}</td>
                         <td>{{ p.layanan.nama_layanan }}</td>
                         <td>{{ p.jumlah_pendamping }}</td>
                         <td>Rp {{ p.total|rupiah }}</td>
@@ -57,7 +57,7 @@
                     {% for t in bukti_bayar %}
                     <tr>
                         <td>{{ t.invoice.nomor_invoice }}</td>
-                        <td>{{ t.invoice.pengajuan.pemohon.nama_lengkap }}</td>
+                        <td>{{ t.invoice.pengajuan.nama_pemohon }}</td>
                         <td>{{ t.payment_method.name }}</td>
                         <td>Rp {{ t.amount|rupiah }}</td>
                         <td><span class="badge text-bg-secondary">{{ t.get_status_display }}</span></td>

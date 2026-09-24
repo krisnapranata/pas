@@ -37,6 +37,25 @@ def _is_petugas_pembayaran(user):
     )
 
 
+def _bisa_akses_pengajuan(request, pengajuan):
+    """Pemilik akun, petugas, atau sesi lacak pemohon tanpa akun."""
+    if _is_petugas_pembayaran(request.user):
+        return True
+    if request.user.is_authenticated and pengajuan.pemohon_id == request.user.id:
+        return True
+    return pengajuan.pk in request.session.get("lacak_pengajuan", [])
+
+
+def _redirect_tak_berhak(request):
+    if request.user.is_authenticated:
+        return redirect("pembayaran:invoice_saya")
+    messages.info(
+        request,
+        "Silakan lacak pengajuan dengan nomor pengajuan dan kontak untuk mengakses pembayaran.",
+    )
+    return redirect("pas:lacak_pengajuan")
+
+
 def get_or_create_invoice(pengajuan):
     """Buat invoice dari snapshot total pengajuan jika belum ada."""
     invoice, created = Invoice.objects.get_or_create(pengajuan=pengajuan)
@@ -58,35 +77,46 @@ def invoice_saya(request):
     return render(request, "pembayaran/invoice_saya.html", {"invoices": invoices})
 
 
-@login_required
 def buat_invoice(request, pengajuan_id):
-    pengajuan = get_object_or_404(Pengajuan, pk=pengajuan_id, pemohon=request.user)
+    pengajuan = get_object_or_404(Pengajuan, pk=pengajuan_id)
+    if not _bisa_akses_pengajuan(request, pengajuan):
+        return _redirect_tak_berhak(request)
     # Hanya bisa buat invoice setelah Operasi menyetujui (link pembayaran aktif)
     if pengajuan.status != Pengajuan.Status.MENUNGGU_PEMBAYARAN:
         messages.error(request, "Link pembayaran belum aktif (menunggu persetujuan Operasi).")
-        return redirect("pas:detail_pengajuan", pk=pengajuan.pk)
+        if request.user.is_authenticated:
+            return redirect("pas:detail_pengajuan", pk=pengajuan.pk)
+        return redirect("pas:lacak_detail", pk=pengajuan.pk)
     invoice = get_or_create_invoice(pengajuan)
     log_action(request, "BUAT_INVOICE", "Invoice", invoice.pk)
     return redirect("pembayaran:bayar", invoice_id=invoice.pk)
 
 
-@login_required
 def bayar(request, invoice_id):
-    invoice = get_object_or_404(Invoice, pk=invoice_id, pengajuan__pemohon=request.user)
+    invoice = get_object_or_404(
+        Invoice.objects.select_related("pengajuan__layanan"), pk=invoice_id
+    )
+    if not _bisa_akses_pengajuan(request, invoice.pengajuan):
+        return _redirect_tak_berhak(request)
     methods = PaymentMethod.objects.filter(active=True)
     return render(request, "pembayaran/bayar.html", {"invoice": invoice, "methods": methods})
 
 
-@login_required
 @require_POST
 def buat_transaksi(request, invoice_id):
-    invoice = get_object_or_404(Invoice, pk=invoice_id, pengajuan__pemohon=request.user)
+    invoice = get_object_or_404(
+        Invoice.objects.select_related("pengajuan"), pk=invoice_id
+    )
+    if not _bisa_akses_pengajuan(request, invoice.pengajuan):
+        return _redirect_tak_berhak(request)
     method_id = request.POST.get("method")
     method = get_object_or_404(PaymentMethod, pk=method_id, active=True)
 
     if invoice.status == Invoice.Status.PAID:
         messages.info(request, "Invoice sudah lunas.")
-        return redirect("pembayaran:invoice_saya")
+        if request.user.is_authenticated:
+            return redirect("pembayaran:invoice_saya")
+        return redirect("pas:lacak_detail", pk=invoice.pengajuan_id)
 
     # expired invoice -> batalkan & minta ulang (jangan gandakan invoice)
     if invoice.status == Invoice.Status.EXPIRED:
@@ -143,13 +173,12 @@ def buat_transaksi(request, invoice_id):
     return redirect(next_page, pk=transaksi.pk)
 
 
-@login_required
 def detail_transaksi(request, pk):
     transaksi = get_object_or_404(
         PaymentTransaction.objects.select_related("invoice", "payment_method", "manual"), pk=pk
     )
-    if not (transaksi.invoice.pengajuan.pemohon == request.user or _is_petugas_pembayaran(request.user)):
-        return redirect("pembayaran:invoice_saya")
+    if not _bisa_akses_pengajuan(request, transaksi.invoice.pengajuan):
+        return _redirect_tak_berhak(request)
 
     qr_data_url = None
     if transaksi.qr_string:
@@ -174,12 +203,13 @@ def detail_transaksi(request, pk):
     )
 
 
-@login_required
 def upload_bukti(request, pk):
-    transaksi = get_object_or_404(PaymentTransaction, pk=pk)
+    transaksi = get_object_or_404(
+        PaymentTransaction.objects.select_related("invoice__pengajuan"), pk=pk
+    )
     invoice = transaksi.invoice
-    if request.user.role == "PEMOHON" and invoice.pengajuan.pemohon != request.user:
-        return redirect("pembayaran:invoice_saya")
+    if not _bisa_akses_pengajuan(request, invoice.pengajuan):
+        return _redirect_tak_berhak(request)
     if request.method == "POST" and "bukti" in request.FILES:
         manual, _ = PembayaranManual.objects.get_or_create(transaksi=transaksi)
         if manual.bukti:
@@ -193,7 +223,7 @@ def upload_bukti(request, pk):
         notify_role(
             "KOMERSIL",
             "Bukti pembayaran diunggah",
-            f"{invoice.pengajuan.pemohon.nama_lengkap} mengunggah bukti pembayaran untuk "
+            f"{invoice.pengajuan.nama_pemohon} mengunggah bukti pembayaran untuk "
             f"{invoice.nomor_invoice} (Rp {format_rupiah(transaksi.amount)}). Menunggu verifikasi.",
             url=f"/pembayaran/verifikasi/{transaksi.pk}/",
             pengajuan=invoice.pengajuan,

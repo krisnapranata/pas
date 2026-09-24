@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% load rupiah %}
+
+{% block title %}Status {{ pengajuan.nomor_pengajuan }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+        <h4 class="mb-0">{{ pengajuan.nomor_pengajuan }}</h4>
+        <span class="text-muted small">{{ pengajuan.nama_pemohon }}{% if pengajuan.instansi_pemohon %} — {{ pengajuan.instansi_pemohon }}{% endif %}</span>
+    </div>
+    <span class="badge text-bg-primary fs-6">{{ pengajuan.get_status_display }}</span>
+</div>
+
+{% if pengajuan.catatan %}
+<div class="alert alert-warning"><strong>Catatan:</strong> {{ pengajuan.catatan }}</div>
+{% endif %}
+
+{% if pengajuan.status == 'PAS_TERBIT' %}
+<div class="alert alert-success"><strong>PAS telah diterbitkan.</strong> Silakan ambil kartu PAS Anda di Operasi.</div>
+{% elif pengajuan.status == 'MENUNGGU_PEMBAYARAN' %}
+<div class="alert alert-info">Pengajuan disetujui. Silakan lakukan pembayaran agar PAS dapat diterbitkan.</div>
+{% elif pengajuan.status == 'DITOLAK_OPERASI' %}
+<div class="alert alert-danger">Pengajuan ditolak. Silakan hubungi petugas untuk informasi lebih lanjut.</div>
+{% elif pengajuan.status == 'REVISI_PEMOHON' %}
+<div class="alert alert-warning">Data/dokumen perlu diperbaiki. Silakan hubungi petugas Komersil.</div>
+{% endif %}
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="card-title">Data Layanan</h6>
+                <table class="table table-sm mb-0">
+                    <tr><th style="width:200px">Layanan</th><td>{{ pengajuan.layanan.nama_layanan }}</td></tr>
+                    <tr><th>Tanggal Pelaksanaan</th><td>{{ pengajuan.tanggal_pelaksanaan|date:"d M Y" }}{% if pengajuan.waktu_kedatangan %} ({{ pengajuan.waktu_kedatangan|time:"H:i" }}){% endif %}</td></tr>
+                    <tr><th>Nomor Penerbangan</th><td>{{ pengajuan.nomor_penerbangan|default:"-" }}</td></tr>
+                    <tr><th>Asal Penerbangan</th><td>{{ pengajuan.asal_penerbangan|default:"-" }}</td></tr>
+                    <tr><th>Tujuan/Instansi</th><td>{{ pengajuan.tujuan|default:"-" }}</td></tr>
+                    <tr><th>Jumlah Tamu</th><td>{{ pengajuan.jumlah_tamu }}</td></tr>
+                    <tr><th>Jumlah Pendamping</th><td>{{ pengajuan.jumlah_pendamping }}</td></tr>
+                    <tr><th>Keterangan</th><td>{{ pengajuan.keterangan|default:"-" }}</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="card-title">Tarif</h6>
+                <table class="table table-sm mb-0">
+                    <tr><th style="width:200px">Harga Satuan</th><td>Rp {{ pengajuan.harga_satuan|rupiah }}</td></tr>
+                    <tr><th>Satuan</th><td>{{ pengajuan.satuan|default:"-" }}</td></tr>
+                    <tr class="fw-bold"><th>TOTAL</th><td>Rp {{ pengajuan.total|rupiah }}</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title">Dokumen Identitas Pendamping</h6>
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>#</th><th>Nama</th><th>Dokumen</th><th>Status</th></tr></thead>
+                    <tbody>
+                        {% for pd in pengajuan.pendamping.all %}
+                        <tr>
+                            <td>{{ pd.urutan }}</td>
+                            <td>{{ pd.nama }}</td>
+                            <td><a href="{{ pd.file.url }}" target="_blank">Lihat</a></td>
+                            <td><span class="badge text-bg-secondary">{{ pd.get_status_verifikasi_display }}</span></td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-muted">Belum ada pendamping.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="card-title">Timeline Proses</h6>
+                <ul class="list-unstyled mb-0">
+                    {% for t in timeline %}
+                    <li class="d-flex align-items-start mb-2">
+                        {% if t.state == 'done' %}<span class="text-success me-2">&#10003;</span>
+                        {% elif t.state == 'current' %}<span class="text-primary me-2">&#9679;</span>
+                        {% else %}<span class="text-muted me-2">&#9675;</span>{% endif %}
+                        <span class="{% if t.state == 'todo' %}text-muted{% endif %}">{{ t.label }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        {% if pengajuan.status == 'MENUNGGU_PEMBAYARAN' and invoice %}
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="card-title">Pembayaran</h6>
+                <table class="table table-sm mb-3">
+                    <tr><th style="width:140px">Invoice</th><td>{{ invoice.nomor_invoice }}</td></tr>
+                    <tr><th>Total</th><td class="fw-bold">Rp {{ invoice.total|rupiah }}</td></tr>
+                    <tr><th>Status</th><td>{{ invoice.get_status_display }}</td></tr>
+                </table>
+                <a href="{% url 'pembayaran:buat_invoice' pengajuan.pk %}" class="btn btn-success w-100">Bayar Sekarang</a>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card shadow-sm">
+            <div class="card-body d-grid gap-2">
+                <a href="{% url 'pas:lacak_pengajuan' %}" class="btn btn-outline-secondary">Lacak Pengajuan Lain</a>
+                <a href="{% url 'pas:buat_pengajuan' %}" class="btn btn-outline-primary">Buat Pengajuan Baru</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

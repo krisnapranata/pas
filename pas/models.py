@@ -75,8 +75,19 @@ class Pengajuan(models.Model):
 
     nomor_pengajuan = models.CharField(max_length=30, unique=True, blank=True)
     pemohon = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="pengajuan"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="pengajuan",
     )
+    # Snapshot identitas pemohon (wajib untuk pengajuan tanpa akun)
+    pemohon_nama = models.CharField("Nama Pemohon", max_length=255, blank=True)
+    pemohon_instansi = models.CharField(
+        "Instansi/Perusahaan Pemohon", max_length=255, blank=True
+    )
+    pemohon_no_hp = models.CharField("No. HP Pemohon", max_length=20, blank=True)
+    pemohon_email = models.EmailField("Email Pemohon", blank=True)
     layanan = models.ForeignKey(Layanan, on_delete=models.PROTECT, related_name="pengajuan")
     tanggal_pelaksanaan = models.DateField()
     waktu_kedatangan = models.TimeField(null=True, blank=True)
@@ -113,6 +124,24 @@ class Pengajuan(models.Model):
 
     def __str__(self):
         return self.nomor_pengajuan or f"Pengajuan #{self.pk}"
+
+    @property
+    def nama_pemohon(self):
+        if self.pemohon_id:
+            return self.pemohon.nama_lengkap
+        return self.pemohon_nama or "Pemohon"
+
+    @property
+    def instansi_pemohon(self):
+        if self.pemohon_id:
+            return self.pemohon.instansi
+        return self.pemohon_instansi
+
+    @property
+    def kontak_pemohon(self):
+        if self.pemohon_id:
+            return self.pemohon.phone or self.pemohon.email
+        return self.pemohon_no_hp or self.pemohon_email
 
     def _generate_nomor(self):
         now = timezone.now()

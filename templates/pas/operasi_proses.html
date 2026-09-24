@@ -11,8 +11,9 @@
                 <h5>{{ pengajuan.nomor_pengajuan }}</h5>
                 <span class="badge text-bg-secondary">{{ pengajuan.get_status_display }}</span>
                 <table class="table table-sm mt-2">
-                    <tr><th style="width:200px">Pemohon</th><td>{{ pengajuan.pemohon.nama_lengkap }}</td></tr>
-                    <tr><th>Instansi</th><td>{{ pengajuan.pemohon.instansi|default:"-" }}</td></tr>
+                    <tr><th style="width:200px">Pemohon</th><td>{{ pengajuan.nama_pemohon }}</td></tr>
+                    <tr><th>Instansi</th><td>{{ pengajuan.instansi_pemohon|default:"-" }}</td></tr>
+                    <tr><th>No. HP</th><td>{{ pengajuan.kontak_pemohon|default:"-" }}</td></tr>
                     <tr><th>Layanan</th><td>{{ pengajuan.layanan.nama_layanan }}</td></tr>
                     <tr><th>Tanggal</th><td>{{ pengajuan.tanggal_pelaksanaan|date:"d M Y" }}</td></tr>
                     <tr><th>Jumlah Pendamping</th><td>{{ pengajuan.jumlah_pendamping }}</td></tr>

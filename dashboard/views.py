@@ -196,8 +196,8 @@ def export_pengajuan_csv(request):
         writer.writerow(
             [
                 p.nomor_pengajuan,
-                p.pemohon.nama_lengkap,
-                p.pemohon.instansi,
+                p.nama_pemohon,
+                p.instansi_pemohon,
                 p.pic_nama,
                 p.layanan.nama_layanan,
                 p.tanggal_pelaksanaan,

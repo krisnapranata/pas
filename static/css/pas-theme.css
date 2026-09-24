@@ -1,5 +1,5 @@
 /* ============================================================
-   PAS Bandara — tema aplikasi
+   EPermit — tema aplikasi
    Diadaptasi 1:1 dari landing page /var/www/html/pas/index.html
    (navy + blue gradient, sudut membulat, tombol pill, soft shadow)
    ============================================================ */
@@ -428,3 +428,140 @@ h1, h2, h3, h4, h5, h6 {
   margin-bottom: 6px;
 }
 .auth-brand .brand-logo { width: 32px; height: 32px; }
+
+/* ============================================================
+   LANDING — 4 pilihan akses
+   ============================================================ */
+.landing-hero {
+  min-height: calc(100vh - 90px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 16px 64px;
+  border-radius: var(--radius);
+  background:
+    radial-gradient(1200px 600px at 80% -10%, #0d4fa8 0%, transparent 60%),
+    radial-gradient(circle at 15% 90%, rgba(0, 212, 255, 0.14) 0, transparent 45%),
+    linear-gradient(135deg, #07213d 0%, #0a2540 45%, #0b3a6b 100%);
+}
+.landing-inner {
+  width: 100%;
+  max-width: 1040px;
+  text-align: center;
+}
+.landing-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 1.6rem;
+  color: #fff;
+  letter-spacing: -0.02em;
+  margin-bottom: 18px;
+}
+.landing-brand .brand-logo { width: 34px; height: 34px; fill: var(--cyan); }
+.landing-brand .brand-accent { color: var(--cyan); }
+.landing-title {
+  color: #fff;
+  font-size: clamp(1.7rem, 3vw, 2.6rem);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.landing-subtitle {
+  color: rgba(255, 255, 255, 0.75);
+  margin-bottom: 36px;
+}
+.landing-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 34px;
+}
+.landing-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 30px 20px 26px;
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.landing-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow);
+  color: var(--ink);
+}
+.landing-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0052cc 0%, #00a6ff 100%);
+  color: #fff;
+  box-shadow: 0 12px 30px -10px rgba(0, 102, 255, 0.55);
+  margin-bottom: 8px;
+}
+.landing-icon svg { width: 38px; height: 38px; }
+.landing-card-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--navy);
+}
+.landing-card-desc {
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.landing-badge {
+  margin-top: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  background: var(--bs-success-bg-subtle);
+  color: var(--bs-success-text-emphasis);
+}
+.landing-badge-login {
+  background: var(--bs-primary-bg-subtle);
+  color: var(--bs-primary-text-emphasis);
+}
+.landing-track {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 20px 22px;
+  background: rgba(255, 255, 255, 0.97);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  text-align: left;
+}
+.landing-track-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.landing-track-form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.landing-track-form .form-control { flex: 1 1 220px; }
+.landing-track-form .btn { flex: 0 0 auto; }
+
+@media (max-width: 900px) {
+  .landing-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .landing-grid { grid-template-columns: minmax(0, 1fr); }
+}

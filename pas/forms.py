@@ -15,6 +15,10 @@ class PengajuanForm(forms.ModelForm):
             "tujuan",
             "jumlah_tamu",
             "jumlah_pendamping",
+            "pemohon_nama",
+            "pemohon_instansi",
+            "pemohon_no_hp",
+            "pemohon_email",
             "pic_nama",
             "pic_jabatan",
             "pic_nomor_identitas",
@@ -23,6 +27,10 @@ class PengajuanForm(forms.ModelForm):
             "keterangan",
         ]
         widgets = {
+            "pemohon_nama": forms.TextInput(attrs={"class": "form-control"}),
+            "pemohon_instansi": forms.TextInput(attrs={"class": "form-control"}),
+            "pemohon_no_hp": forms.TextInput(attrs={"class": "form-control"}),
+            "pemohon_email": forms.EmailInput(attrs={"class": "form-control"}),
             "layanan": forms.Select(attrs={"class": "form-select"}),
             "tanggal_pelaksanaan": forms.DateInput(
                 attrs={"type": "date", "class": "form-control"}
@@ -45,7 +53,13 @@ class PengajuanForm(forms.ModelForm):
             "keterangan": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, user=None, **kwargs):
+        if user is not None and user.is_authenticated:
+            initial = kwargs.setdefault("initial", {})
+            initial.setdefault("pemohon_nama", user.nama_lengkap)
+            initial.setdefault("pemohon_instansi", user.instansi)
+            initial.setdefault("pemohon_no_hp", user.phone)
+            initial.setdefault("pemohon_email", user.email)
         super().__init__(*args, **kwargs)
         self.fields["layanan"].queryset = self.fields["layanan"].queryset.filter(aktif=True)
         self.fields["layanan"].empty_label = "-- Pilih Layanan --"
@@ -53,6 +67,9 @@ class PengajuanForm(forms.ModelForm):
         self.fields["jumlah_tamu"].initial = 0
         self.fields["pic_nama"].required = True
         self.fields["pic_no_hp"].required = True
+        self.fields["pemohon_nama"].required = True
+        self.fields["pemohon_no_hp"].required = True
+        self.fields["pemohon_email"].required = True
 
     def clean(self):
         cleaned = super().clean()

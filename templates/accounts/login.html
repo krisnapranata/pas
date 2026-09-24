@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Login - PAS Bandara{% endblock %}
+{% block title %}Login - EPermit{% endblock %}
 
 {% block content %}
 <div class="auth-page">
@@ -9,15 +9,19 @@
             <svg viewBox="0 0 24 24" class="brand-logo" aria-hidden="true">
                 <path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5L21 16z"/>
             </svg>
-            <span>PAS<span class="brand-accent">Bandara</span></span>
+            <span>E<span class="brand-accent">Permit</span></span>
         </div>
-        <p class="text-center text-muted mb-4">Sistem Manajemen Permintaan PAS</p>
+        <p class="text-center text-muted mb-4">Sistem Manajemen Perizinan Bandara</p>
         <form method="post">
             {% csrf_token %}
+            {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
             {{ form.as_p }}
             <button type="submit" class="btn btn-primary w-100">Masuk</button>
         </form>
         <hr class="my-4">
+        <p class="text-center mb-2 small">
+            <a href="{% url 'accounts:home' %}">&larr; Kembali ke halaman utama</a>
+        </p>
         <p class="text-center mb-0 small">
             Belum punya akun? <a href="{% url 'accounts:register' %}">Daftar</a>
         </p>

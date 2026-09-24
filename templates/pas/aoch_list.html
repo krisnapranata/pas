@@ -13,8 +13,8 @@
             {% for p in pengajuan %}
             <tr>
                 <td>{{ p.nomor_pengajuan }}</td>
-                <td>{{ p.pemohon.nama_lengkap }}</td>
-                <td>{{ p.pemohon.instansi|default:"-" }}</td>
+                <td>{{ p.nama_pemohon }}</td>
+                <td>{{ p.instansi_pemohon|default:"-" }}</td>
                 <td>{{ p.layanan.nama_layanan }}</td>
                 <td>{{ p.tanggal_pelaksanaan|date:"d-m-Y" }}</td>
                 <td>{{ p.jumlah_pendamping }}</td>

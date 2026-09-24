@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% load rupiah %}
+
+{% block title %}Pengajuan Terkirim{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-4">
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-body p-4 text-center">
+                {% if pengajuan %}
+                {% if pengajuan.status == 'DITOLAK_OPERASI' %}
+                <div class="display-5 text-danger mb-2">&#10007;</div>
+                <h4 class="mb-2">Pengajuan Ditolak</h4>
+                <p class="text-muted mb-4">
+                    Pengajuan Anda tidak dapat diproses. Lihat catatan di halaman status.
+                </p>
+                {% else %}
+                <div class="display-5 text-success mb-2">&#10003;</div>
+                <h4 class="mb-2">Pengajuan Berhasil Dikirim</h4>
+                <p class="text-muted mb-4">
+                    Pengajuan Anda langsung masuk ke antrian verifikasi Komersil.
+                </p>
+                {% endif %}
+
+                <div class="bg-light rounded p-3 mb-3">
+                    <div class="small text-muted">Nomor Pengajuan</div>
+                    <div class="fs-4 fw-bold">{{ pengajuan.nomor_pengajuan }}</div>
+                </div>
+
+                <table class="table table-sm text-start">
+                    <tr><th style="width:180px">Layanan</th><td>{{ pengajuan.layanan.nama_layanan }}</td></tr>
+                    <tr><th>Tanggal Pelaksanaan</th><td>{{ pengajuan.tanggal_pelaksanaan|date:"d M Y" }}</td></tr>
+                    <tr><th>Status</th><td><span class="badge text-bg-primary">{{ pengajuan.get_status_display }}</span></td></tr>
+                    <tr><th>Total</th><td>Rp {{ pengajuan.total|rupiah }}</td></tr>
+                </table>
+
+                <div class="alert alert-warning small text-start">
+                    <strong>Penting:</strong> simpan nomor pengajuan <strong>{{ pengajuan.nomor_pengajuan }}</strong>
+                    dan kontak yang Anda daftarkan ({{ pengajuan.kontak_pemohon }}).
+                    Keduanya diperlukan untuk melacak status dan melakukan pembayaran.
+                </div>
+
+                <div class="d-flex gap-2 justify-content-center flex-wrap">
+                    <a href="{% url 'pas:lacak_detail' pengajuan.pk %}" class="btn btn-primary">Lihat Status Pengajuan</a>
+                    <a href="{% url 'pas:buat_pengajuan' %}" class="btn btn-outline-secondary">Buat Pengajuan Lain</a>
+                </div>
+                {% else %}
+                <h4 class="mb-2">Sesi Berakhir</h4>
+                <p class="text-muted mb-4">
+                    Halaman ini sudah tidak menampilkan data. Gunakan nomor pengajuan dan kontak
+                    Anda untuk melacak status.
+                </p>
+                <a href="{% url 'pas:lacak_pengajuan' %}" class="btn btn-primary">Lacak Pengajuan</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
