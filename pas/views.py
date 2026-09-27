@@ -394,7 +394,7 @@ def verifikasi_list(request):
             Pengajuan.Status.DIAJUKAN,
             Pengajuan.Status.VERIFIKASI_KOMERSIL,
         ]
-    ).select_related("layanan", "pemohon")
+    ).select_related("layanan", "pemohon").prefetch_related("pendamping")
     return render(request, "pas/verifikasi_list.html", {"pengajuan": query})
 
 
@@ -470,7 +470,7 @@ def operasi_list(request):
             Pengajuan.Status.ACKNOWLEDGED_AOCH,
             Pengajuan.Status.DILAKSANAKAN,
         ]
-    ).select_related("layanan", "pemohon")
+    ).select_related("layanan", "pemohon").prefetch_related("pendamping")
     return render(request, "pas/operasi_list.html", {"pengajuan": query})
 
 
@@ -607,7 +607,7 @@ def aoch_list(request):
             Pengajuan.Status.DILAKSANAKAN,
             Pengajuan.Status.SELESAI,
         ]
-    ).select_related("layanan", "pemohon")
+    ).select_related("layanan", "pemohon").prefetch_related("pendamping")
     return render(request, "pas/aoch_list.html", {"pengajuan": query})
 
 

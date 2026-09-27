@@ -6,24 +6,63 @@
 {% block content %}
 <h4 class="mb-3">Antrian Verifikasi (Komersil)</h4>
 <div class="table-responsive">
-    <table class="table table-striped bg-white rounded shadow-sm">
+    <table class="table table-striped bg-white rounded shadow-sm align-middle">
         <thead>
-            <tr><th>Nomor</th><th>Pemohon</th><th>Instansi</th><th>Layanan</th><th>Pendamping</th><th>Total</th><th>Status</th><th></th></tr>
+            <tr>
+                <th>Nomor</th>
+                <th>Pemohon</th>
+                <th>Instansi</th>
+                <th>Layanan</th>
+                <th>Tgl. Permohonan</th>
+                <th>Pelaksanaan</th>
+                <th>PIC</th>
+                <th>Pendamping</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
         </thead>
         <tbody>
             {% for p in pengajuan %}
             <tr>
-                <td>{{ p.nomor_pengajuan }}</td>
-                <td>{{ p.nama_pemohon }}</td>
-                <td>{{ p.instansi_pemohon|default:"-" }}</td>
+                <td class="fw-semibold">{{ p.nomor_pengajuan }}</td>
+                <td>
+                    {{ p.nama_pemohon }}
+                    {% if p.pemohon_no_hp %}<div class="small text-muted">{{ p.pemohon_no_hp }}</div>{% endif %}
+                    {% if p.pemohon_email %}<div class="small text-muted">{{ p.pemohon_email }}</div>{% endif %}
+                </td>
+                <td>
+                    {{ p.instansi_pemohon|default:"-" }}
+                    {% if p.tujuan %}<div class="small text-muted">Tujuan: {{ p.tujuan }}</div>{% endif %}
+                </td>
                 <td>{{ p.layanan.nama_layanan }}</td>
-                <td>{{ p.jumlah_pendamping }}</td>
+                <td>
+                    {{ p.created_at|date:"d M Y" }}
+                    <div class="small text-muted">{{ p.created_at|time:"H:i" }} WIB</div>
+                </td>
+                <td>
+                    {{ p.tanggal_pelaksanaan|date:"d M Y" }}
+                    {% if p.waktu_kedatangan %}<div class="small text-muted">{{ p.waktu_kedatangan|time:"H:i" }} WIB</div>{% endif %}
+                </td>
+                <td>
+                    {{ p.pic_nama|default:"-" }}
+                    {% if p.pic_no_hp %}<div class="small text-muted">{{ p.pic_no_hp }}</div>{% endif %}
+                </td>
+                <td>
+                    {% if p.pendamping.all %}
+                    <ol class="mb-0 ps-3 small">
+                        {% for pd in p.pendamping.all %}<li>{{ pd.nama }}</li>{% endfor %}
+                    </ol>
+                    {% else %}
+                    <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
                 <td>Rp {{ p.total|rupiah }}</td>
                 <td><span class="badge text-bg-secondary">{{ p.get_status_display }}</span></td>
                 <td><a href="{% url 'pas:verifikasi_dokumen' p.pk %}" class="btn btn-sm btn-primary">Verifikasi</a></td>
             </tr>
             {% empty %}
-            <tr><td colspan="8" class="text-center text-muted py-4">Tidak ada pengajuan menunggu verifikasi.</td></tr>
+            <tr><td colspan="11" class="text-center text-muted py-4">Tidak ada pengajuan menunggu verifikasi.</td></tr>
             {% endfor %}
         </tbody>
     </table>
