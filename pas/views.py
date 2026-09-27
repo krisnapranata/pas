@@ -1,5 +1,8 @@
+import logging
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -16,6 +19,8 @@ from .models import (
     Pengajuan,
     StatusRiwayat,
 )
+
+logger = logging.getLogger(__name__)
 
 TIMELINE = [
     ("DRAFT", "Draft"),
@@ -177,32 +182,51 @@ def buat_pengajuan(request):
             pengajuan.pemohon = user
             pengajuan.status = Pengajuan.Status.DRAFT
             pengajuan.simpan_snapshot_tarif()
-            pengajuan.save()
-            errors = _simpan_pendamping(
-                pengajuan, pengajuan.jumlah_pendamping, request.POST, request.FILES
-            )
-            if errors:
-                pengajuan.delete()
-                for e in errors:
-                    messages.error(request, e)
-            else:
-                pengajuan.nomor_pengajuan = pengajuan._generate_nomor()
-                pengajuan.save(update_fields=["nomor_pengajuan"])
-                log_action(request, "BUAT_PENGAJUAN", "Pengajuan", pengajuan.pk)
-                if user is None:
-                    # Pemohon publik: langsung ajukan tanpa perlu login.
-                    _ajukan_pengajuan(pengajuan, request)
-                    request.session["sukses_pengajuan"] = pengajuan.pk
-                    ids = request.session.get("lacak_pengajuan", [])
-                    if pengajuan.pk not in ids:
-                        ids.append(pengajuan.pk)
-                    request.session["lacak_pengajuan"] = ids[-20:]
-                    return redirect("pas:pengajuan_sukses")
-                messages.success(
+            errors = []
+            try:
+                for percobaan in range(5):
+                    try:
+                        with transaction.atomic():
+                            pengajuan.nomor_pengajuan = pengajuan._generate_nomor()
+                            pengajuan.save()
+                            errors = _simpan_pendamping(
+                                pengajuan,
+                                pengajuan.jumlah_pendamping,
+                                request.POST,
+                                request.FILES,
+                            )
+                            if errors:
+                                pengajuan.delete()
+                        break
+                    except IntegrityError:
+                        if percobaan == 4:
+                            raise
+            except OSError:
+                logger.exception("Gagal menyimpan dokumen pendamping pengajuan")
+                messages.error(
                     request,
-                    "Draft pengajuan dibuat. Silakan ajukan untuk diproses.",
+                    "Gagal mengunggah dokumen pendamping. Silakan coba lagi.",
                 )
-                return redirect("pas:detail_pengajuan", pk=pengajuan.pk)
+            else:
+                if errors:
+                    for e in errors:
+                        messages.error(request, e)
+                else:
+                    log_action(request, "BUAT_PENGAJUAN", "Pengajuan", pengajuan.pk)
+                    if user is None:
+                        # Pemohon publik: langsung ajukan tanpa perlu login.
+                        _ajukan_pengajuan(pengajuan, request)
+                        request.session["sukses_pengajuan"] = pengajuan.pk
+                        ids = request.session.get("lacak_pengajuan", [])
+                        if pengajuan.pk not in ids:
+                            ids.append(pengajuan.pk)
+                        request.session["lacak_pengajuan"] = ids[-20:]
+                        return redirect("pas:pengajuan_sukses")
+                    messages.success(
+                        request,
+                        "Draft pengajuan dibuat. Silakan ajukan untuk diproses.",
+                    )
+                    return redirect("pas:detail_pengajuan", pk=pengajuan.pk)
     else:
         initial = {}
         if user is not None:
