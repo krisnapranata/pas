@@ -23,7 +23,7 @@
         <h6 class="mb-2">Pengajuan Akan Datang</h6>
         <div class="table-responsive">
             <table class="table table-sm">
-                <thead><tr><th>Nomor</th><th>Pemohon</th><th>Instansi</th><th>Layanan</th><th>Tanggal</th><th>Pendamping</th><th>Status</th><th></th></tr></thead>
+                <thead><tr><th>Nomor</th><th>Pemohon</th><th>Instansi</th><th>Layanan</th><th>Tgl. Permohonan</th><th>Pelaksanaan</th><th>Pendamping</th><th>Status</th><th></th></tr></thead>
                 <tbody>
                     {% for p in pengajuan %}
                     <tr>
@@ -31,6 +31,7 @@
                         <td>{{ p.nama_pemohon }}</td>
                         <td>{{ p.instansi_pemohon|default:"-" }}</td>
                         <td>{{ p.layanan.nama_layanan }}</td>
+                        <td>{{ p.created_at|date:"d-m-Y" }}<div class="small text-muted">{{ p.created_at|time:"H:i" }} WIB</div></td>
                         <td>{{ p.tanggal_pelaksanaan|date:"d-m-Y" }}</td>
                         <td>{{ p.jumlah_pendamping }}</td>
                         <td><span class="badge text-bg-secondary">{{ p.get_status_display }}</span></td>
@@ -46,7 +47,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="8" class="text-center text-muted py-3">Tidak ada pengajuan.</td></tr>
+                    <tr><td colspan="9" class="text-center text-muted py-3">Tidak ada pengajuan.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
