@@ -147,19 +147,48 @@ def _simpan_pendamping(pengajuan, jumlah_pendamping, post, files):
     return errors
 
 
-def _build_timeline(current_status):
+def _build_timeline(current_status, history=None):
+    history = set(history or [])
+    codes = [code for code, _ in TIMELINE]
+    if current_status in codes:
+        history.add(current_status)
+    last_index = max(
+        (codes.index(code) for code in history if code in codes), default=-1
+    )
     items = []
-    reached = True
-    for code, label in TIMELINE:
+    for i, (code, label) in enumerate(TIMELINE):
         if current_status == code:
             state = "current"
-            reached = False
-        elif reached:
+        elif i <= last_index:
             state = "done"
         else:
             state = "todo"
         items.append({"code": code, "label": label, "state": state})
+    if current_status not in codes:
+        try:
+            label = Pengajuan.Status(current_status).label
+        except ValueError:
+            label = current_status
+        items.append(
+            {
+                "code": current_status,
+                "label": label,
+                "state": "rejected"
+                if current_status in ("DITOLAK_OPERASI", "DIBATALKAN")
+                else "current",
+            }
+        )
     return items
+
+
+def _catatan_terakhir(pengajuan):
+    """Catatan pada riwayat status terakhir yang diisi (untuk penolakan/revisi)."""
+    riwayat = (
+        pengajuan.riwayat_status.exclude(catatan="")
+        .order_by("-created_at")
+        .first()
+    )
+    return riwayat.catatan if riwayat else ""
 
 
 # ---------- Pemohon ----------
@@ -304,7 +333,10 @@ def detail_pengajuan(request, pk):
         return redirect("pas:daftar_pengajuan")
 
     pendamping = pengajuan.pendamping.all()
-    timeline = _build_timeline(pengajuan.status)
+    timeline = _build_timeline(
+        pengajuan.status,
+        pengajuan.riwayat_status.values_list("status", flat=True),
+    )
 
     return render(
         request,
@@ -313,6 +345,7 @@ def detail_pengajuan(request, pk):
             "pengajuan": pengajuan,
             "pendamping": pendamping,
             "timeline": timeline,
+            "catatan_terakhir": _catatan_terakhir(pengajuan),
             "is_komersil": _is_komersil(request.user),
             "is_operasi": _is_operasi(request.user),
             "is_aoch": _is_aoch(request.user),
@@ -377,7 +410,11 @@ def lacak_detail(request, pk):
         "pas/lacak_detail.html",
         {
             "pengajuan": pengajuan,
-            "timeline": _build_timeline(pengajuan.status),
+            "timeline": _build_timeline(
+                pengajuan.status,
+                pengajuan.riwayat_status.values_list("status", flat=True),
+            ),
+            "catatan_terakhir": _catatan_terakhir(pengajuan),
             "invoice": invoice,
         },
     )

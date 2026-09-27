@@ -21,9 +21,15 @@
 {% elif pengajuan.status == 'MENUNGGU_PEMBAYARAN' %}
 <div class="alert alert-info">Pengajuan disetujui. Silakan lakukan pembayaran agar PAS dapat diterbitkan.</div>
 {% elif pengajuan.status == 'DITOLAK_OPERASI' %}
-<div class="alert alert-danger">Pengajuan ditolak. Silakan hubungi petugas untuk informasi lebih lanjut.</div>
+<div class="alert alert-danger">
+    Pengajuan ditolak. Silakan hubungi petugas untuk informasi lebih lanjut.
+    {% if catatan_terakhir %}<div class="mt-1"><strong>Alasan:</strong> {{ catatan_terakhir }}</div>{% endif %}
+</div>
 {% elif pengajuan.status == 'REVISI_PEMOHON' %}
-<div class="alert alert-warning">Data/dokumen perlu diperbaiki. Silakan hubungi petugas Komersil.</div>
+<div class="alert alert-warning">
+    Data/dokumen perlu diperbaiki. Silakan hubungi petugas Komersil.
+    {% if catatan_terakhir %}<div class="mt-1"><strong>Catatan petugas:</strong> {{ catatan_terakhir }}</div>{% endif %}
+</div>
 {% endif %}
 
 <div class="row g-3">
@@ -86,8 +92,9 @@
                     <li class="d-flex align-items-start mb-2">
                         {% if t.state == 'done' %}<span class="text-success me-2">&#10003;</span>
                         {% elif t.state == 'current' %}<span class="text-primary me-2">&#9679;</span>
+                        {% elif t.state == 'rejected' %}<span class="text-danger me-2">&#10007;</span>
                         {% else %}<span class="text-muted me-2">&#9675;</span>{% endif %}
-                        <span class="{% if t.state == 'todo' %}text-muted{% endif %}">{{ t.label }}</span>
+                        <span class="{% if t.state == 'todo' %}text-muted{% elif t.state == 'rejected' %}text-danger fw-semibold{% endif %}">{{ t.label }}</span>
                     </li>
                     {% endfor %}
                 </ul>

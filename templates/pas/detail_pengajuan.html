@@ -13,6 +13,12 @@
 <div class="alert alert-warning"><strong>Catatan:</strong> {{ pengajuan.catatan }}</div>
 {% endif %}
 
+{% if pengajuan.status == 'DITOLAK_OPERASI' and catatan_terakhir %}
+<div class="alert alert-danger"><strong>Alasan ditolak:</strong> {{ catatan_terakhir }}</div>
+{% elif pengajuan.status == 'REVISI_PEMOHON' and catatan_terakhir %}
+<div class="alert alert-warning"><strong>Catatan petugas:</strong> {{ catatan_terakhir }}</div>
+{% endif %}
+
 {% if pengajuan.status == 'PAS_TERBIT' %}
 <div class="alert alert-success"><strong>PAS telah diterbitkan.</strong> Silakan ambil kartu PAS Anda di Operasi.</div>
 {% endif %}
@@ -90,8 +96,9 @@
                     <li class="d-flex align-items-start mb-2">
                         {% if t.state == 'done' %}<span class="text-success me-2">&#10003;</span>
                         {% elif t.state == 'current' %}<span class="text-primary me-2">&#9679;</span>
+                        {% elif t.state == 'rejected' %}<span class="text-danger me-2">&#10007;</span>
                         {% else %}<span class="text-muted me-2">&#9675;</span>{% endif %}
-                        <span class="{% if t.state == 'todo' %}text-muted{% endif %}">{{ t.label }}</span>
+                        <span class="{% if t.state == 'todo' %}text-muted{% elif t.state == 'rejected' %}text-danger fw-semibold{% endif %}">{{ t.label }}</span>
                     </li>
                     {% endfor %}
                 </ul>
