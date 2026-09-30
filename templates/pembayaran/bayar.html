@@ -26,10 +26,13 @@
                 <form method="post" action="{% url 'pembayaran:buat_transaksi' invoice.pk %}">
                     {% csrf_token %}
                     {% for m in methods %}
-                    <label class="d-flex justify-content-between align-items-center border rounded p-3 mb-2 {% if forloop.first %}border-primary{% endif %}" style="cursor:pointer;">
+                    <label class="d-flex justify-content-between align-items-center border rounded p-3 mb-2 {% if forloop.first and m.active %}border-primary{% endif %} {% if not m.active %}bg-body-tertiary{% endif %}"
+                           style="cursor:{% if m.active %}pointer{% else %}not-allowed{% endif %};">
                         <span>
-                            <input type="radio" name="method" value="{{ m.pk }}" {% if forloop.first %}checked{% endif %} class="me-2">
-                            <strong>{{ m.name }}</strong>
+                            <input type="radio" name="method" value="{{ m.pk }}"
+                                   {% if forloop.first and m.active %}checked{% endif %}
+                                   {% if not m.active %}disabled{% endif %} class="me-2">
+                            <strong class="{% if not m.active %}text-muted{% endif %}">{{ m.name }}</strong>
                             <span class="badge text-bg-secondary ms-1">{{ m.get_type_display }}</span>
                             {% if m.configuration.norek %}
                             <div class="text-muted small mt-1">
@@ -37,7 +40,12 @@
                             </div>
                             {% endif %}
                         </span>
+                        {% if not m.active %}
+                        <span class="badge text-bg-secondary">Tidak tersedia</span>
+                        {% endif %}
                     </label>
+                    {% empty %}
+                    <p class="text-muted mb-0">Belum ada jenis pembayaran yang tersedia.</p>
                     {% endfor %}
                     <button type="submit" class="btn btn-primary w-100 mt-2">Buat Transaksi</button>
                 </form>

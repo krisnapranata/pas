@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Verifikasi PAS Visitor{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge text-bg-dark">Verifikasi</span>
+                    <span class="small text-muted">Untuk petugas Avsec / petugas bandara</span>
+                </div>
+                <h4 class="mb-2">Verifikasi PAS Visitor</h4>
+                <p class="text-muted small">
+                    Masukkan <strong>nomor request (REQ-...)</strong> atau
+                    <strong>nomor PAS visitor</strong> yang diberikan AOCH untuk melihat
+                    status: <em>Aktif</em> atau <em>Sudah Kedaluwarsa</em>.
+                    PAS visitor hanya berlaku satu hari.
+                </p>
+
+                <form method="post" class="d-flex gap-2 mb-3">
+                    {% csrf_token %}
+                    <input type="text" name="nomor" class="form-control"
+                           value="{{ query }}" placeholder="REQ-20260930-0001 / PAS-..." required autofocus>
+                    <button type="submit" class="btn btn-primary text-nowrap">Verifikasi</button>
+                </form>
+
+                {% if hasil %}
+                    {% if not hasil.ditemukan %}
+                    <div class="alert alert-danger mb-0">
+                        <strong>Data tidak ditemukan.</strong> Periksa kembali nomor yang dimasukkan.
+                    </div>
+                    {% else %}
+                    {% with p=hasil.pengajuan s=hasil.serah %}
+                    <div class="alert alert-{% if p.status_masa_berlaku == 'KEDALUWARSA' %}danger{% elif p.status_masa_berlaku == 'BELUM' %}secondary{% elif p.status_masa_berlaku == 'AKTIF' %}success{% else %}info{% endif %} mb-3">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div>
+                                <div class="fw-bold fs-5 mb-0">
+                                    {% if p.status_masa_berlaku == 'KEDALUWARSA' %}
+                                    SUDAH KEDALUWARSA
+                                    {% elif p.status_masa_berlaku == 'AKTIF' %}
+                                    AKTIF
+                                    {% elif p.status_masa_berlaku == 'TERJADWAL' %}
+                                    TERJADWAL
+                                    {% else %}
+                                    BELUM DITERBITKAN
+                                    {% endif %}
+                                </div>
+                                <div class="small">
+                                    {{ p.nomor_pengajuan }} — {{ p.layanan.nama_layanan }}
+                                    ({{ p.layanan.get_lokasi_display }})
+                                </div>
+                            </div>
+                            <span class="badge text-bg-light border fs-6">{{ p.get_status_display }}</span>
+                        </div>
+                    </div>
+
+                    <table class="table table-sm">
+                        <tr><th style="width:190px">Pemohon / PIC</th><td>{{ p.nama_pemohon }}</td></tr>
+                        <tr><th>Tanggal Pelaksanaan</th><td>{{ p.tanggal_pelaksanaan|date:"d M Y" }}</td></tr>
+                        <tr><th>Tanggal Berlaku PAS</th>
+                            <td>{{ p.tanggal_berlaku_pas|date:"d M Y"|default:"Belum diterbitkan" }}</td></tr>
+                        <tr><th>Masa Berlaku Habis</th>
+                            <td>{{ p.masa_berlaku_habis|date:"d M Y"|default:"-" }}
+                                <span class="text-muted small">(PAS berlaku satu hari)</span></td></tr>
+                        <tr><th>Status Serah Terima</th>
+                            <td>{{ s.get_status_display|default:"Belum ada catatan" }}</td></tr>
+                        {% if s and s.tanggal_penyerahan %}
+                        <tr><th>Diserahkan</th><td>{{ s.tanggal_penyerahan|date:"d M Y H:i" }} WIB — {{ s.penerima_nama }}</td></tr>
+                        {% endif %}
+                        {% if s and s.tanggal_pengembalian %}
+                        <tr><th>Dikembalikan</th><td>{{ s.tanggal_pengembalian|date:"d M Y H:i" }} WIB</td></tr>
+                        {% endif %}
+                        <tr><th>Atas Nama</th>
+                            <td>
+                                <ol class="mb-0 ps-3">
+                                    {% for pd in hasil.pendamping %}
+                                    <li>{{ pd.nama }} — <span class="font-monospace">{{ pd.nik }}</span>
+                                        {% if pd.nomor_pas %}<span class="badge text-bg-secondary">PAS {{ pd.nomor_pas }}</span>{% endif %}
+                                    </li>
+                                    {% endfor %}
+                                </ol>
+                            </td>
+                        </tr>
+                    </table>
+
+                    {% if p.status_masa_berlaku == 'KEDALUWARSA' %}
+                    <div class="alert alert-danger small mb-0">
+                        PAS visitor ini sudah lewat masa berlaku dan <strong>tidak sah untuk
+                        digunakan kembali</strong> (termasuk esok hari).
+                    </div>
+                    {% elif p.status_masa_berlaku == 'AKTIF' and s and s.status == 'DIKEMBALIKAN' %}
+                    <div class="alert alert-warning small mb-0">
+                        PAS sudah dikembalikan pemohon — tidak boleh dipakai lagi.
+                    </div>
+                    {% endif %}
+                    {% endwith %}
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

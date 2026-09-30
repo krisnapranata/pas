@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -13,7 +15,14 @@ class Layanan(models.Model):
         PER_PENDAMPING_PER_HARI = "PER_PENDAMPING_PER_HARI", "Per Pendamping / Hari"
         BY_REQUEST = "BY_REQUEST", "By Request"
 
+    class Lokasi(models.TextChoices):
+        DEPARTURE = "DEPARTURE", "Departure"
+        ARRIVAL = "ARRIVAL", "Arrival"
+
     kode_layanan = models.CharField(max_length=50, unique=True)
+    lokasi = models.CharField(
+        max_length=20, choices=Lokasi.choices, default=Lokasi.ARRIVAL, db_index=True
+    )
     nama_layanan = models.CharField(max_length=255)
     deskripsi = models.TextField(blank=True)
     minimal_pendamping = models.PositiveIntegerField(default=0)
@@ -65,6 +74,7 @@ class Pengajuan(models.Model):
         DITOLAK_OPERASI = "DITOLAK_OPERASI", "Ditolak Operasi"
         DISETUJUI_OPERASI = "DISETUJUI_OPERASI", "Disetujui Operasi"
         MENUNGGU_PEMBAYARAN = "MENUNGGU_PEMBAYARAN", "Menunggu Pembayaran"
+        BUKTI_TERUNGGAH = "BUKTI_TERUNGGAH", "Bukti Bayar Sudah Diunggah"
         DIBAYAR = "DIBAYAR", "Sudah Dibayar"
         PAS_TERBIT = "PAS_TERBIT", "PAS Diterbitkan"
         SIAP_DILAKSANAKAN = "SIAP_DILAKSANAKAN", "Siap Dilaksanakan"
@@ -108,6 +118,11 @@ class Pengajuan(models.Model):
     status = models.CharField(max_length=30, choices=Status.choices, default=Status.DRAFT)
     catatan = models.TextField(blank=True)
 
+    # Masa berlaku PAS visitor — 1 hari kalender sejak tanggal terbit
+    tanggal_berlaku_pas = models.DateField(
+        "Tanggal Berlaku PAS", null=True, blank=True, db_index=True
+    )
+
     # Snapshot tarif (§10) — tidak berubah saat master tarif diubah
     harga_satuan = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     jenis_tarif = models.CharField(max_length=30, blank=True)
@@ -142,6 +157,25 @@ class Pengajuan(models.Model):
         if self.pemohon_id:
             return self.pemohon.phone or self.pemohon.email
         return self.pemohon_no_hp or self.pemohon_email
+
+    @property
+    def masa_berlaku_habis(self):
+        """PAS visitor hanya berlaku satu hari: habis pada hari berikutnya."""
+        if not self.tanggal_berlaku_pas:
+            return None
+        return self.tanggal_berlaku_pas + timedelta(days=1)
+
+    @property
+    def status_masa_berlaku(self):
+        """AKTIF / KEDALUWARSA / TERJADWAL / BELUM — untuk menu verifikasi & notifikasi."""
+        if not self.tanggal_berlaku_pas:
+            return "BELUM"
+        today = timezone.localdate()
+        if today > self.tanggal_berlaku_pas:
+            return "KEDALUWARSA"
+        if today == self.tanggal_berlaku_pas:
+            return "AKTIF"
+        return "TERJADWAL"
 
     def _generate_nomor(self):
         now = timezone.now()
@@ -179,6 +213,8 @@ class DokumenPendamping(models.Model):
     pengajuan = models.ForeignKey(Pengajuan, on_delete=models.CASCADE, related_name="pendamping")
     urutan = models.PositiveSmallIntegerField()
     nama = models.CharField("Nama Pendamping", max_length=255)
+    nik = models.CharField("NIK / No. Identitas", max_length=50, blank=True)
+    nomor_pas = models.CharField("Nomor PAS Visitor", max_length=50, blank=True, db_index=True)
     file = models.FileField(upload_to="pengajuan/pendamping/")
     status_verifikasi = models.CharField(
         max_length=20, choices=Status.choices, default=Status.UPLOADED
@@ -236,6 +272,10 @@ class DaftarHitam(models.Model):
         PERUSAHAAN = "PERUSAHAAN", "Nama Perusahaan"
 
     tipe = models.CharField(max_length=20, choices=Tipe.choices, default=Tipe.PERUSAHAAN)
+    nik = models.CharField(
+        "NIK / No. Identitas", max_length=50, blank=True, db_index=True,
+        help_text="Kosongkan untuk blacklist berdasarkan nama saja.",
+    )
     nama = models.CharField(max_length=255)
     alasan = models.TextField(blank=True)
     aktif = models.BooleanField(default=True)
@@ -256,3 +296,59 @@ class DaftarHitam(models.Model):
         if not nama:
             return None
         return cls.objects.filter(aktif=True, nama__iexact=nama.strip()).first()
+
+
+class SerahTerimaPAS(models.Model):
+    """Catatan penyerahan & pengembalian fisik PAS visitor oleh petugas Avsec."""
+
+    class Status(models.TextChoices):
+        BELUM = "BELUM", "Belum Diserahkan"
+        DITERIMA = "DITERIMA", "Sudah Diterima Pemohon"
+        DIKEMBALIKAN = "DIKEMBALIKAN", "Sudah Dikembalikan Pemohon"
+
+    pengajuan = models.OneToOneField(
+        Pengajuan, on_delete=models.CASCADE, related_name="serah_terima"
+    )
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.BELUM
+    )
+    penerima_nama = models.CharField(
+        "Nama Penerima (PIC / Wakil)", max_length=255, blank=True
+    )
+    penerima_nik = models.CharField("NIK Penerima", max_length=50, blank=True)
+    penerima_jabatan = models.CharField("Jabatan Penerima", max_length=100, blank=True)
+    penerima_delegasi = models.CharField(
+        "Ditugaskan Kepada", max_length=255, blank=True,
+        help_text="Diisi bila penyerahan diwakilkan oleh orang lain dari PIC pemohon.",
+    )
+    petugas = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="serah_terima_dicatat",
+        verbose_name="Dicatat oleh",
+    )
+    foto_penyerahan = models.ImageField(
+        "Foto Penyerahan", upload_to="pas/serah_terima/foto/", null=True, blank=True
+    )
+    ttd_elektronik = models.ImageField(
+        "Tanda Tangan Elektronik", upload_to="pas/serah_terima/ttd/", null=True, blank=True
+    )
+    tanggal_penyerahan = models.DateTimeField(null=True, blank=True)
+    tanggal_pengembalian = models.DateTimeField(null=True, blank=True)
+    catatan = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+        verbose_name = "Serah Terima PAS"
+        verbose_name_plural = "Serah Terima PAS"
+
+    def __str__(self):
+        return f"{self.pengajuan_id} - {self.get_status_display()}"
+
+    @property
+    def sudah_diserahkan(self):
+        return self.status in (self.Status.DITERIMA, self.Status.DIKEMBALIKAN)

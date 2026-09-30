@@ -9,7 +9,7 @@
         <h4 class="mb-0">{{ pengajuan.nomor_pengajuan }}</h4>
         <span class="text-muted small">{{ pengajuan.nama_pemohon }}{% if pengajuan.instansi_pemohon %} — {{ pengajuan.instansi_pemohon }}{% endif %}</span>
     </div>
-    <span class="badge text-bg-primary fs-6">{{ pengajuan.get_status_display }}</span>
+    <span class="badge text-bg-primary fs-6">{% if menunggu_verifikasi and pengajuan.status == 'MENUNGGU_PEMBAYARAN' %}Bukti Bayar Sudah Diunggah{% else %}{{ pengajuan.get_status_display }}{% endif %}</span>
 </div>
 
 {% if pengajuan.catatan %}
@@ -18,8 +18,14 @@
 
 {% if pengajuan.status == 'PAS_TERBIT' %}
 <div class="alert alert-success"><strong>PAS telah diterbitkan.</strong> Silakan ambil kartu PAS Anda di Operasi.</div>
-{% elif pengajuan.status == 'MENUNGGU_PEMBAYARAN' %}
-<div class="alert alert-info">Pengajuan disetujui. Silakan lakukan pembayaran agar PAS dapat diterbitkan.</div>
+{% elif pengajuan.status == 'MENUNGGU_PEMBAYARAN' or pengajuan.status == 'BUKTI_TERUNGGAH' %}
+    {% if menunggu_verifikasi %}
+    <div class="alert alert-info">Bukti pembayaran sudah diunggah — <strong>menunggu verifikasi petugas Komersil</strong>.</div>
+    {% elif menunggu_bukti %}
+    <div class="alert alert-info">Transaksi pembayaran sudah dibuat. Langkah berikutnya: <strong>unggah bukti pembayaran</strong> Anda.</div>
+    {% else %}
+    <div class="alert alert-info">Pengajuan disetujui. Silakan lakukan pembayaran agar PAS dapat diterbitkan.</div>
+    {% endif %}
 {% elif pengajuan.status == 'DITOLAK_OPERASI' %}
 <div class="alert alert-danger">
     Pengajuan ditolak. Silakan hubungi petugas untuk informasi lebih lanjut.
@@ -101,7 +107,8 @@
             </div>
         </div>
 
-        {% if pengajuan.status == 'MENUNGGU_PEMBAYARAN' and invoice %}
+        {% if pengajuan.status == 'MENUNGGU_PEMBAYARAN' or pengajuan.status == 'BUKTI_TERUNGGAH' %}
+            {% if invoice %}
         <div class="card shadow-sm mb-3">
             <div class="card-body">
                 <h6 class="card-title">Pembayaran</h6>
@@ -110,9 +117,23 @@
                     <tr><th>Total</th><td class="fw-bold">Rp {{ invoice.total|rupiah }}</td></tr>
                     <tr><th>Status</th><td>{{ invoice.get_status_display }}</td></tr>
                 </table>
+                {% if menunggu_verifikasi %}
+                <div class="alert alert-info small py-2">Bukti sudah diunggah, menunggu verifikasi petugas.</div>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'pembayaran:upload_bukti' menunggu_verifikasi.pk %}" class="btn btn-primary">Lihat / Ganti Bukti</a>
+                    <a href="{% url 'pembayaran:detail_transaksi' menunggu_verifikasi.pk %}" class="btn btn-outline-secondary">Detail Transaksi</a>
+                </div>
+                {% elif menunggu_bukti %}
+                <div class="d-grid gap-2">
+                    <a href="{% url 'pembayaran:upload_bukti' menunggu_bukti.pk %}" class="btn btn-primary">Upload Bukti Bayar</a>
+                    <a href="{% url 'pembayaran:detail_transaksi' menunggu_bukti.pk %}" class="btn btn-outline-secondary">Lihat Transaksi</a>
+                </div>
+                {% else %}
                 <a href="{% url 'pembayaran:buat_invoice' pengajuan.pk %}" class="btn btn-success w-100">Bayar Sekarang</a>
+                {% endif %}
             </div>
         </div>
+            {% endif %}
         {% endif %}
 
         <div class="card shadow-sm">

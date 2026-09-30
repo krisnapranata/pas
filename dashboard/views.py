@@ -4,9 +4,9 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Sum
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
-from django.utils import timezone
 
-from pas.models import Layanan, Pengajuan
+from pas.models import DaftarHitam, Layanan, Pengajuan, SerahTerimaPAS
+from pas.services import ringkasan_masa_berlaku
 from pembayaran.models import Invoice, PaymentTransaction
 
 
@@ -22,6 +22,8 @@ def home(request):
         return _home_operasi(request)
     if role == "AOCH":
         return _home_aoch(request)
+    if role == "AVSEC":
+        return _home_avsec(request)
     return _home_pemohon(request)
 
 
@@ -29,13 +31,10 @@ def _home_pemohon(request):
     qs = Pengajuan.objects.filter(pemohon=request.user)
     konteks = {
         "total_pengajuan": qs.count(),
-        "menunggu_verifikasi": qs.filter(
-            status__in=["DIAJUKAN", "VERIFIKASI_KOMERSIL"]
-        ).count(),
-        "menunggu_operasi": qs.filter(
-            status__in=["DISETUJUI_KOMERSIL", "MENUNGGU_OPERASI"]
-        ).count(),
+        "menunggu_verifikasi": qs.filter(status="DIBAYAR").count(),
+        "menunggu_operasi": qs.filter(status="MENUNGGU_OPERASI").count(),
         "menunggu_pembayaran": qs.filter(status="MENUNGGU_PEMBAYARAN").count(),
+        "bukti_terunggah": qs.filter(status="BUKTI_TERUNGGAH").count(),
         "sudah_dibayar": qs.filter(status="DIBAYAR").count(),
         "pas_terbit": qs.filter(status="PAS_TERBIT").count(),
         "ditolak": qs.filter(status="DITOLAK_OPERASI").count(),
@@ -45,25 +44,22 @@ def _home_pemohon(request):
 
 
 def _home_komersil(request):
-    today = timezone.now().date()
     bukti_bayar = PaymentTransaction.objects.filter(
         status=PaymentTransaction.Status.PENDING,
         manual__isnull=False,
     ).select_related("invoice__pengajuan__pemohon", "payment_method")
     konteks = {
-        "pengajuan_baru": Pengajuan.objects.filter(status="DIAJUKAN").count(),
-        "perlu_revisi": Pengajuan.objects.filter(status="REVISI_PEMOHON").count(),
-        "disetujui_hari_ini": Pengajuan.objects.filter(
-            status="DISETUJUI_KOMERSIL", updated_at__date=today
-        ).count(),
+        "pengajuan_baru": Pengajuan.objects.filter(status="MENUNGGU_PEMBAYARAN").count(),
+        "sudah_dibayar": Pengajuan.objects.filter(status="DIBAYAR").count(),
         "menunggu_operasi": Pengajuan.objects.filter(status="MENUNGGU_OPERASI").count(),
+        "pas_terbit": Pengajuan.objects.filter(status="PAS_TERBIT").count(),
         "menunggu_verifikasi_bayar": bukti_bayar.count(),
         "bukti_bayar": bukti_bayar.order_by("-created_at")[:10],
-        "pengajuan": Pengajuan.objects.filter(
-            status__in=["DIAJUKAN", "VERIFIKASI_KOMERSIL"]
-        )
+        "pengajuan": Pengajuan.objects.filter(status__in=["DIBAYAR", "MENUNGGU_OPERASI"])
         .select_related("layanan", "pemohon")
         .order_by("-created_at")[:10],
+        "layanan_aktif": Layanan.objects.filter(aktif=True).count(),
+        "masa_berlaku": ringkasan_masa_berlaku(),
     }
     return render(request, "dashboard/home_komersil.html", konteks)
 
@@ -71,25 +67,28 @@ def _home_komersil(request):
 def _home_operasi(request):
     konteks = {
         "menunggu_persetujuan": Pengajuan.objects.filter(status="MENUNGGU_OPERASI").count(),
-        "disetujui": Pengajuan.objects.filter(status="MENUNGGU_PEMBAYARAN").count(),
-        "ditolak": Pengajuan.objects.filter(status="DITOLAK_OPERASI").count(),
-        "menunggu_pembayaran": Pengajuan.objects.filter(status="MENUNGGU_PEMBAYARAN").count(),
         "sudah_dibayar": Pengajuan.objects.filter(status="DIBAYAR").count(),
-        "siap_terbit": Pengajuan.objects.filter(
-            status__in=["DIBAYAR", "ACKNOWLEDGED_AOCH"]
+        "ditolak": Pengajuan.objects.filter(status="DITOLAK_OPERASI").count(),
+        "menunggu_pembayaran": Pengajuan.objects.filter(
+            status__in=["MENUNGGU_PEMBAYARAN", "BUKTI_TERUNGGAH"]
         ).count(),
         "pas_terbit": Pengajuan.objects.filter(status="PAS_TERBIT").count(),
+        "selesai": Pengajuan.objects.filter(status="SELESAI").count(),
+        "daftar_hitam": DaftarHitam.objects.filter(aktif=True).count(),
         "pengajuan": Pengajuan.objects.filter(
             status__in=[
                 "MENUNGGU_OPERASI",
                 "MENUNGGU_PEMBAYARAN",
+                "BUKTI_TERUNGGAH",
                 "DIBAYAR",
                 "ACKNOWLEDGED_AOCH",
                 "PAS_TERBIT",
+                "SELESAI",
             ]
         )
         .select_related("layanan", "pemohon")
         .order_by("-created_at")[:10],
+        "masa_berlaku": ringkasan_masa_berlaku(),
     }
     return render(request, "dashboard/home_operasi.html", konteks)
 
@@ -109,9 +108,30 @@ def _home_aoch(request):
             ]
         )
         .select_related("layanan", "pemohon")
+        .prefetch_related("pendamping", "serah_terima")
         .order_by("-created_at")[:10],
+        "masa_berlaku": ringkasan_masa_berlaku(),
     }
     return render(request, "dashboard/home_aoch.html", konteks)
+
+
+def _home_avsec(request):
+    konteks = {
+        "menunggu_serah": Pengajuan.objects.filter(status="PAS_TERBIT").count(),
+        "diserahkan": Pengajuan.objects.filter(status="DILAKSANAKAN").count(),
+        "dikembalikan": SerahTerimaPAS.objects.filter(
+            status=SerahTerimaPAS.Status.DIKEMBALIKAN
+        ).count(),
+        "selesai": Pengajuan.objects.filter(status="SELESAI").count(),
+        "pengajuan": Pengajuan.objects.filter(
+            status__in=["PAS_TERBIT", "DILAKSANAKAN", "SELESAI"]
+        )
+        .select_related("layanan", "pemohon")
+        .prefetch_related("pendamping", "serah_terima")
+        .order_by("-created_at")[:10],
+        "masa_berlaku": ringkasan_masa_berlaku(),
+    }
+    return render(request, "dashboard/home_avsec.html", konteks)
 
 
 def _home_admin(request):
@@ -122,7 +142,9 @@ def _home_admin(request):
             status__in=["DIAJUKAN", "VERIFIKASI_KOMERSIL"]
         ).count(),
         "menunggu_operasi": Pengajuan.objects.filter(status="MENUNGGU_OPERASI").count(),
-        "menunggu_pembayaran": Pengajuan.objects.filter(status="MENUNGGU_PEMBAYARAN").count(),
+        "menunggu_pembayaran": Pengajuan.objects.filter(
+            status__in=["MENUNGGU_PEMBAYARAN", "BUKTI_TERUNGGAH"]
+        ).count(),
         "selesai": Pengajuan.objects.filter(status="SELESAI").count(),
         "total_pemasukan": total_pemasukan,
         "layanan": Layanan.objects.filter(aktif=True).count(),

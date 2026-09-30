@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Bukti Bayar{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-4">
+    <div class="col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h4 class="mb-2">Upload Bukti Bayar</h4>
+                <p class="text-muted small mb-4">
+                    Masukkan nomor pengajuan dan kontak (No. HP atau email) yang Anda daftarkan
+                    saat mengirim pengajuan. Anda akan diarahkan ke halaman pembayaran atau
+                    ke menu upload bukti bila transaksi sudah dibuat.
+                </p>
+
+                {% if error %}
+                <div class="alert alert-danger">{{ error }}</div>
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Nomor Pengajuan</label>
+                        <input type="text" name="nomor_pengajuan" class="form-control"
+                               value="{{ nomor }}" placeholder="cth: REQ-20260924-0001" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">No. HP atau Email</label>
+                        <input type="text" name="kontak" class="form-control"
+                               placeholder="cth: 081234567890 atau nama@email.com" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Lanjut ke Pembayaran</button>
+                </form>
+
+                <hr class="my-4">
+                <p class="text-center small mb-0">
+                    Belum mengajukan? <a href="{% url 'pas:buat_pengajuan' %}">Buat Pengajuan</a>
+                    &middot; <a href="{% url 'pas:lacak_pengajuan' %}">Lacak Pengajuan</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

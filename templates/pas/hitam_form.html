@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}{% if entri %}Edit Daftar Hitam{% else %}Tambah Daftar Hitam{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="mb-3">{% if entri %}Edit Entri: {{ entri.nama }}{% else %}Tambah Entri Daftar Hitam{% endif %}</h5>
+                <form method="post">
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Tipe <span class="text-danger">*</span></label>
+                            {{ form.tipe }}
+                            {{ form.tipe.errors }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">NIK / No. Identitas</label>
+                            {{ form.nik }}
+                            {{ form.nik.errors }}
+                            <div class="form-text">Diisi bila blacklisting berdasarkan NIK pendamping/PIC.</div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Nama <span class="text-danger">*</span></label>
+                            {{ form.nama }}
+                            {{ form.nama.errors }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Alasan</label>
+                            {{ form.alasan }}
+                            {{ form.alasan.errors }}
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                {{ form.aktif }}
+                                <label class="form-check-label ms-1" for="{{ form.aktif.id_for_label }}">Aktif (dicheck saat pengajuan &amp; penerbitan PAS)</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-danger">Simpan</button>
+                        <a href="{% url 'pas:hitam_list' %}" class="btn btn-outline-secondary">Batal</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

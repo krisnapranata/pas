@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}{{ judul }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="mb-3">{{ judul }}</h5>
+                <form method="post">
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Kode <span class="text-danger">*</span></label>
+                            {{ form.code }}
+                            {{ form.code.errors }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Nama <span class="text-danger">*</span></label>
+                            {{ form.name }}
+                            {{ form.name.errors }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Jenis <span class="text-danger">*</span></label>
+                            {{ form.type }}
+                            {{ form.type.errors }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Provider</label>
+                            {{ form.provider }}
+                            {{ form.provider.errors }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Bank</label>
+                            {{ form.bank }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Nomor Rekening</label>
+                            {{ form.norek }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Atas Nama</label>
+                            {{ form.nama }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Urutan Tampil</label>
+                            {{ form.sort_order }}
+                            {{ form.sort_order.errors }}
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <div class="form-check">
+                                {{ form.active }}
+                                <label class="form-check-label" for="{{ form.active.id_for_label }}">
+                                    Aktif (tampil di menu pembayaran pemohon)
+                                </label>
+                            </div>
+                        </div>
+                        {% if form.active.errors %}<div class="col-12 text-danger small">{{ form.active.errors }}</div>{% endif %}
+                    </div>
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary">Simpan</button>
+                        <a href="{% url 'pembayaran:jenis_list' %}" class="btn btn-outline-secondary">Batal</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

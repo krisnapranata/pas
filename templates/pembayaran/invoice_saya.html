@@ -31,7 +31,10 @@
             </td>
             <td>{{ inv.tanggal_jatuh_tempo|date:"d M Y H:i" }}</td>
             <td>
-                {% if inv.transaksi_menunggu_verifikasi %}
+                {% if inv.transaksi_menunggu_bukti %}
+                <a href="{% url 'pembayaran:upload_bukti' inv.transaksi_menunggu_bukti.pk %}" class="btn btn-sm btn-primary">Upload Bukti</a>
+                <a href="{% url 'pembayaran:detail_transaksi' inv.transaksi_menunggu_bukti.pk %}" class="btn btn-sm btn-outline-secondary">Detail</a>
+                {% elif inv.transaksi_menunggu_verifikasi %}
                 <a href="{% url 'pembayaran:detail_transaksi' inv.transaksi_menunggu_verifikasi.pk %}" class="btn btn-sm btn-outline-secondary">Detail</a>
                 {% elif inv.status == 'UNPAID' or inv.status == 'PENDING' or inv.status == 'EXPIRED' %}
                 <a href="{% url 'pembayaran:bayar' inv.pk %}" class="btn btn-sm btn-primary">Bayar</a>

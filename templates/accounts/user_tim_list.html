@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Kelola User{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+        <h4 class="mb-1">Kelola User</h4>
+        <p class="text-muted mb-0">
+            Buat akun baru untuk kawan-kawan Anda. Username dan password akun bisa
+            dilihat lewat tombol <strong>Lihat</strong>.
+        </p>
+    </div>
+    <a href="{% url 'accounts:user_tim_buat' %}" class="btn btn-primary">+ Tambah User</a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th>Nama</th>
+                        <th>Username &amp; Password</th>
+                        <th>Jabatan</th>
+                        <th>Peran</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in daftar_user %}
+                    <tr>
+                        <td>{{ u.nama_lengkap }}</td>
+                        <td>
+                            {{ u.username }}
+                            {% if u.password_awal %}
+                            <button type="button" class="btn btn-sm btn-outline-secondary ms-2"
+                                    onclick="lihatAkun(this)">Lihat</button>
+                            <div class="small text-success mt-1 d-none" data-akun>
+                                Username: <strong>{{ u.username }}</strong> &middot;
+                                Password: <strong>{{ u.password_awal }}</strong>
+                            </div>
+                            {% else %}
+                            <div class="small text-muted mt-1">
+                                Password awal sudah tidak tersedia (sudah login / diubah).
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td>{{ u.jabatan|default:"—" }}</td>
+                        <td><span class="badge text-bg-secondary">{{ u.get_role_display }}</span></td>
+                        <td>
+                            {% if u.is_active %}<span class="badge text-bg-success">Aktif</span>
+                            {% else %}<span class="badge text-bg-secondary">Nonaktif</span>{% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center text-muted py-3">Belum ada akun.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="text-muted small mb-0 mt-2">
+            Password awal hanya ditampilkan sebelum user login pertama kali; setelah itu
+            kolom Password menjadi kosong.
+        </p>
+    </div>
+</div>
+
+<script>
+function lihatAkun(btn) {
+    const box = btn.closest('td').querySelector('[data-akun]');
+    const sembunyi = box.classList.toggle('d-none');
+    btn.textContent = sembunyi ? 'Lihat' : 'Sembunyikan';
+}
+</script>
+{% endblock %}

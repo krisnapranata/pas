@@ -3,34 +3,54 @@ import logging
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError, transaction
+from django.db.models import ProtectedError, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from accounts.templatetags.rupiah import format_rupiah
 from audit.models import log_action
 from notifikasi.services import notify_pemohon, notify_role
-from pembayaran.models import Invoice
+from pembayaran.models import Invoice, PaymentTransaction
 from pembayaran.views import get_or_create_invoice
 
-from .forms import PengajuanForm
+from .forms import DaftarHitamForm, LayananForm, PengajuanForm
 from .models import (
     DaftarHitam,
     DokumenPendamping,
+    Layanan,
     Pengajuan,
-    StatusRiwayat,
+    SerahTerimaPAS,
+)
+from .services import (
+    BATASAN_AREA,
+    berkas_pendamping_kadang,
+    buang_berkas_pendamping_lama,
+    cek_blacklist_form,
+    cek_blacklist_nama,
+    cek_blacklist_nik,
+    daftar_berkas_pendamping,
+    kumpulkan_pendamping,
+    normalisasi_nik,
+    pesan_blacklist,
+    set_status,
+    simpan_berkas_pendamping,
+    simpan_pendamping,
+    bersihkan_berkas_pendamping,
 )
 
 logger = logging.getLogger(__name__)
 
+# Alur baru: Diajukan → Menunggu Pembayaran → Dibayar → Menunggu Operasi → PAS Terbit
 TIMELINE = [
     ("DRAFT", "Draft"),
     ("DIAJUKAN", "Diajukan"),
-    ("VERIFIKASI_KOMERSIL", "Verifikasi Komersil"),
-    ("DISETUJUI_KOMERSIL", "Disetujui Komersil"),
-    ("MENUNGGU_OPERASI", "Menunggu Operasi"),
     ("MENUNGGU_PEMBAYARAN", "Menunggu Pembayaran"),
+    ("BUKTI_TERUNGGAH", "Bukti Bayar Sudah Diunggah"),
     ("DIBAYAR", "Sudah Dibayar"),
+    ("MENUNGGU_OPERASI", "Menunggu Operasi"),
     ("PAS_TERBIT", "PAS Diterbitkan"),
+    ("SELESAI", "Selesai"),
 ]
 
 
@@ -50,31 +70,21 @@ def _is_aoch(user):
     return _has_role(user, "AOCH")
 
 
+def _is_avsec(user):
+    return _has_role(user, "AVSEC")
+
+
 def _is_petugas(user):
-    return _has_role(user, "KOMERSIL", "OPERASI", "AOCH")
+    return _has_role(user, "KOMERSIL", "OPERASI", "AOCH", "AVSEC")
 
 
 def _set_status(pengajuan, status, user, catatan=""):
-    pengajuan.status = status
-    pengajuan.save(update_fields=["status", "updated_at"])
-    StatusRiwayat.objects.create(
-        pengajuan=pengajuan, status=status, catatan=catatan, oleh=user
-    )
+    """Kompatibel dengan kode lama — delegasi ke services.set_status."""
+    return set_status(pengajuan, status, user, catatan)
 
 
 def _blacklist_hit(nama, instansi):
-    nama = (nama or "").strip()
-    if nama:
-        hit = DaftarHitam.objects.filter(
-            aktif=True, tipe=DaftarHitam.Tipe.ORANG, nama__iexact=nama
-        ).first()
-        if hit:
-            return hit
-    if instansi:
-        return DaftarHitam.objects.filter(
-            aktif=True, tipe=DaftarHitam.Tipe.PERUSAHAAN, nama__iexact=instansi.strip()
-        ).first()
-    return None
+    return cek_blacklist_nama(nama, instansi)
 
 
 def _normalisasi_hp(value):
@@ -102,52 +112,35 @@ def _kontak_cocok(pengajuan, kontak):
     return any(kontak_digit == _normalisasi_hp(k) for k in kandidat)
 
 
-def _ajukan_pengajuan(pengajuan, request):
-    """Ubah status ke DIAJUKAN (atau tolak bila masuk daftar hitam)."""
+def _ajukan_ke_pembayaran(pengajuan, request):
+    """Setelah lolos pengecekan NIK daftar hitam, langsung arahkan ke pembayaran."""
     user = request.user if request.user.is_authenticated else None
-    hit = _blacklist_hit(pengajuan.nama_pemohon, pengajuan.instansi_pemohon)
-    if hit:
-        alasan = f"Terdaftar dalam daftar hitam: {hit.nama}. {hit.alasan}".strip()
-        _set_status(
-            pengajuan, Pengajuan.Status.DITOLAK_OPERASI, user, catatan=alasan
-        )
-        notify_pemohon(
-            pengajuan,
-            "Pengajuan ditolak",
-            alasan,
-            url=f"/pas/lacak/{pengajuan.pk}/",
-        )
-        log_action(request, "TOLAK_BLACKLIST", "Pengajuan", pengajuan.pk, new_value=hit.nama)
-        return False
-    _set_status(pengajuan, Pengajuan.Status.DIAJUKAN, user)
-    notify_role(
-        "KOMERSIL",
-        "Pengajuan baru",
-        f"Pengajuan {pengajuan.nomor_pengajuan} menunggu verifikasi.",
-        url=f"/pas/verifikasi/{pengajuan.pk}/",
-        pengajuan=pengajuan,
+    _set_status(pengajuan, Pengajuan.Status.MENUNGGU_PEMBAYARAN, user)
+    invoice = get_or_create_invoice(pengajuan)
+    notify_pemohon(
+        pengajuan,
+        "Pengajuan diterima",
+        f"Pengajuan {pengajuan.nomor_pengajuan} lolos pengecekan identitas. "
+        f"Total pembayaran Rp{format_rupiah(pengajuan.total)}. "
+        "Silakan lakukan pembayaran agar pengajuan diproses.",
+        url=f"/pembayaran/invoice/{invoice.pk}/",
     )
-    log_action(request, "SUBMIT_PENGAJUAN", "Pengajuan", pengajuan.pk)
-    return True
+    log_action(request, "AJUKAN_PENGAJUAN", "Pengajuan", pengajuan.pk)
+    return invoice
 
 
-def _simpan_pendamping(pengajuan, jumlah_pendamping, post, files):
-    """Simpan dokumen identitas pendamping. Return daftar error."""
-    pengajuan.pendamping.all().delete()
-    errors = []
-    for i in range(1, jumlah_pendamping + 1):
-        nama = (post.get(f"pendamping_nama_{i}") or "").strip()
-        file = files.get(f"pendamping_file_{i}")
-        if not nama or not file:
-            errors.append(f"Pendamping {i}: nama dan dokumen identitas wajib diisi.")
-            continue
-        DokumenPendamping.objects.create(
-            pengajuan=pengajuan, urutan=i, nama=nama, file=file
-        )
-    return errors
+def _identitas_hitam(pengajuan):
+    """Cek ulang NIK seluruh pendamping + NIK PIC terhadap daftar hitam."""
+    niks = list(
+        pengajuan.pendamping.values_list("nik", flat=True)
+    )
+    niks.append(pengajuan.pic_nomor_identitas)
+    return cek_blacklist_nik(niks)
 
 
-def _build_timeline(current_status, history=None):
+def _build_timeline(current_status, history=None, label_current=None):
+    """Susun daftar langkah proses; `label_current` mengganti judul langkah
+    yang sedang berjalan (mis. tahap pembayaran yang sudah ada bukti bayar)."""
     history = set(history or [])
     codes = [code for code, _ in TIMELINE]
     if current_status in codes:
@@ -159,6 +152,8 @@ def _build_timeline(current_status, history=None):
     for i, (code, label) in enumerate(TIMELINE):
         if current_status == code:
             state = "current"
+            if label_current:
+                label = label_current
         elif i <= last_index:
             state = "done"
         else:
@@ -201,14 +196,124 @@ def daftar_pengajuan(request):
     return render(request, "pas/daftar_pengajuan.html", {"pengajuan": query})
 
 
+def _jumlah_pendamping(post):
+    try:
+        return max(int(post.get("jumlah_pendamping") or 0), 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _konteks_pendamping(request, jumlah=None):
+    """Data pendamping dari POST + berkas tersimpan, agar form tidak kosong
+    saat dirender ulang (mis. NIK terkena daftar hitam)."""
+    post = request.POST or {}
+    if jumlah is None:
+        jumlah = _jumlah_pendamping(post)
+    return {
+        "pendamping_names": [
+            (post.get(f"pendamping_nama_{i}") or "").strip()
+            for i in range(1, jumlah + 1)
+        ],
+        "pendamping_niks": [
+            (post.get(f"pendamping_nik_{i}") or "").strip()
+            for i in range(1, jumlah + 1)
+        ],
+        "pendamping_files": daftar_berkas_pendamping(request),
+    }
+
+
+def _pesan_error_form(form):
+    """Pesan kesalahan form + daftar kolom isian yang perlu diperbaiki."""
+    pesan = []
+    fokus = []
+    for field, msgs in form.errors.items():
+        label = form[field].label if field in form.fields else ""
+        for m in msgs:
+            pesan.append(f"{label}: {m}" if label else str(m))
+        if field in form.fields:
+            fokus.append(field)
+    return pesan, fokus
+
+
+def _isi_form_konteks(form, user, **extra):
+    layanan = Layanan.objects.filter(aktif=True).order_by("lokasi", "nama_layanan")
+    konteks = {
+        "form": form,
+        "pendamping_names": extra.get("pendamping_names", []),
+        "pendamping_niks": extra.get("pendamping_niks", []),
+        "pendamping_files": extra.get("pendamping_files", {}),
+        "fokus_field": extra.get("fokus_field", []),
+        "publik": user is None,
+        "form_errors": extra.get("form_errors", []),
+        "layanan_departure": list(layanan.filter(lokasi=Layanan.Lokasi.DEPARTURE)),
+        "layanan_arrival": list(layanan.filter(lokasi=Layanan.Lokasi.ARRIVAL)),
+    }
+    if "pengajuan" in extra:
+        konteks["pengajuan"] = extra["pengajuan"]
+    return konteks
+
+
 def buat_pengajuan(request):
-    """Form pengajuan publik — Pemohon tidak perlu login."""
+    """Form pengajuan publik — Pemohon tidak perlu login.
+
+    Langkah 1: pemberitahuan batasan area PAS visitor (Departure & Arrival).
+    Langkah 2: formulir; saat dikirim NIK dicek ke daftar hitam, jika lolos
+    langsung diarahkan ke pembayaran.
+    """
     user = request.user if request.user.is_authenticated else None
+
+    if request.method == "POST" and request.POST.get("aksi") == "paham-batasan":
+        request.session["paham_batasan_area"] = True
+        return redirect("pas:buat_pengajuan")
+
     if request.method == "POST":
+        jumlah = _jumlah_pendamping(request.POST)
+        # Simpan unggahan identitas sementara: browser tidak mengirim ulang
+        # berkas saat form dirender kembali (mis. NIK kena daftar hitam).
+        simpan_berkas_pendamping(request, jumlah)
         form = PengajuanForm(request.POST, user=user)
         if form.is_valid():
+            jumlah = form.cleaned_data.get("jumlah_pendamping") or jumlah
+            data, errors = kumpulkan_pendamping(
+                request.POST,
+                request.FILES,
+                jumlah,
+                berkas_pendamping_kadang(request, jumlah),
+            )
+            pukul = cek_blacklist_form(request.POST, jumlah)
+            fokus_field = []
+            if pukul:
+                pesan, fokus_field = pesan_blacklist(pukul)
+                errors.extend(pesan)
+                daftar = ", ".join(sorted({item["nik"] for item in pukul}))
+                log_action(
+                    request,
+                    "TOLAK_BLACKLIST_NIK",
+                    "Pengajuan",
+                    "",
+                    new_value=daftar,
+                )
+            if errors:
+                return render(
+                    request,
+                    "pas/buat_pengajuan.html",
+                    _isi_form_konteks(
+                        form,
+                        user,
+                        form_errors=errors,
+                        fokus_field=fokus_field,
+                        **_konteks_pendamping(request, jumlah),
+                    ),
+                )
+
             pengajuan = form.save(commit=False)
             pengajuan.pemohon = user
+            # "Data Pemohon" sudah menjadi PIC penanggung jawab langsung
+            pengajuan.pemohon_nama = pengajuan.pic_nama
+            pengajuan.pemohon_no_hp = pengajuan.pic_no_hp
+            pengajuan.pemohon_email = pengajuan.pic_email or ""
+            if user is not None:
+                pengajuan.pemohon_instansi = user.instansi or pengajuan.pemohon_instansi
             pengajuan.status = Pengajuan.Status.DRAFT
             pengajuan.simpan_snapshot_tarif()
             errors = []
@@ -218,14 +323,7 @@ def buat_pengajuan(request):
                         with transaction.atomic():
                             pengajuan.nomor_pengajuan = pengajuan._generate_nomor()
                             pengajuan.save()
-                            errors = _simpan_pendamping(
-                                pengajuan,
-                                pengajuan.jumlah_pendamping,
-                                request.POST,
-                                request.FILES,
-                            )
-                            if errors:
-                                pengajuan.delete()
+                            simpan_pendamping(pengajuan, data)
                         break
                     except IntegrityError:
                         if percobaan == 4:
@@ -241,22 +339,39 @@ def buat_pengajuan(request):
                     for e in errors:
                         messages.error(request, e)
                 else:
-                    log_action(request, "BUAT_PENGAJUAN", "Pengajuan", pengajuan.pk)
-                    if user is None:
-                        # Pemohon publik: langsung ajukan tanpa perlu login.
-                        _ajukan_pengajuan(pengajuan, request)
-                        request.session["sukses_pengajuan"] = pengajuan.pk
-                        ids = request.session.get("lacak_pengajuan", [])
-                        if pengajuan.pk not in ids:
-                            ids.append(pengajuan.pk)
-                        request.session["lacak_pengajuan"] = ids[-20:]
-                        return redirect("pas:pengajuan_sukses")
+                    bersihkan_berkas_pendamping(request)
+                    invoice = _ajukan_ke_pembayaran(pengajuan, request)
+                    request.session["sukses_pengajuan"] = pengajuan.pk
+                    ids = request.session.get("lacak_pengajuan", [])
+                    if pengajuan.pk not in ids:
+                        ids.append(pengajuan.pk)
+                    request.session["lacak_pengajuan"] = ids[-20:]
                     messages.success(
                         request,
-                        "Draft pengajuan dibuat. Silakan ajukan untuk diproses.",
+                        "Pengajuan lolos pengecekan identitas. Silakan lakukan pembayaran.",
                     )
-                    return redirect("pas:detail_pengajuan", pk=pengajuan.pk)
+                    return redirect("pembayaran:bayar", invoice_id=invoice.pk)
+        else:
+            pesan, fokus_field = _pesan_error_form(form)
+            return render(
+                request,
+                "pas/buat_pengajuan.html",
+                _isi_form_konteks(
+                    form,
+                    user,
+                    form_errors=pesan,
+                    fokus_field=fokus_field,
+                    **_konteks_pendamping(request, jumlah),
+                ),
+            )
     else:
+        if not request.session.get("paham_batasan_area"):
+            return render(
+                request,
+                "pas/batasan_area.html",
+                {"batasan_area": BATASAN_AREA, "publik": user is None},
+            )
+        buang_berkas_pendamping_lama()
         initial = {}
         if user is not None:
             initial = {
@@ -266,15 +381,19 @@ def buat_pengajuan(request):
                 "pic_no_hp": user.phone,
                 "pic_email": user.email,
             }
+        if not initial.get("layanan"):
+            initial["layanan"] = (
+                Layanan.objects.filter(aktif=True)
+                .order_by("lokasi", "nama_layanan")
+                .values_list("pk", flat=True)
+                .first()
+            )
         form = PengajuanForm(user=user, initial=initial)
+
     return render(
         request,
         "pas/buat_pengajuan.html",
-        {
-            "form": form,
-            "pendamping_names": [],
-            "publik": user is None,
-        },
+        _isi_form_konteks(form, user, **_konteks_pendamping(request)),
     )
 
 
@@ -285,31 +404,78 @@ def edit_pengajuan(request, pk):
         messages.error(request, "Pengajuan tidak dapat diubah pada status ini.")
         return redirect("pas:detail_pengajuan", pk=pk)
     if request.method == "POST":
+        jumlah = _jumlah_pendamping(request.POST)
+        simpan_berkas_pendamping(request, jumlah)
         form = PengajuanForm(request.POST, instance=pengajuan, user=request.user)
         if form.is_valid():
+            jumlah = form.cleaned_data.get("jumlah_pendamping") or jumlah
+            data, errors = kumpulkan_pendamping(
+                request.POST,
+                request.FILES,
+                jumlah,
+                berkas_pendamping_kadang(request, jumlah),
+            )
+            pukul = cek_blacklist_form(request.POST, jumlah)
+            fokus_field = []
+            if pukul:
+                pesan, fokus_field = pesan_blacklist(pukul)
+                errors.extend(pesan)
+            if errors:
+                return render(
+                    request,
+                    "pas/buat_pengajuan.html",
+                    _isi_form_konteks(
+                        form,
+                        request.user,
+                        pengajuan=pengajuan,
+                        form_errors=errors,
+                        fokus_field=fokus_field,
+                        **_konteks_pendamping(request, jumlah),
+                    ),
+                )
             pengajuan = form.save(commit=False)
+            pengajuan.pemohon_nama = pengajuan.pic_nama
+            pengajuan.pemohon_no_hp = pengajuan.pic_no_hp
+            pengajuan.pemohon_email = pengajuan.pic_email or ""
             pengajuan.simpan_snapshot_tarif()
             pengajuan.save()
-            errors = _simpan_pendamping(
-                pengajuan, pengajuan.jumlah_pendamping, request.POST, request.FILES
+            simpan_pendamping(pengajuan, data)
+            bersihkan_berkas_pendamping(request)
+            log_action(request, "EDIT_PENGAJUAN", "Pengajuan", pengajuan.pk)
+            messages.success(request, "Pengajuan diperbarui.")
+            return redirect("pas:detail_pengajuan", pk=pengajuan.pk)
+        else:
+            pesan, fokus_field = _pesan_error_form(form)
+            return render(
+                request,
+                "pas/buat_pengajuan.html",
+                _isi_form_konteks(
+                    form,
+                    request.user,
+                    pengajuan=pengajuan,
+                    form_errors=pesan,
+                    fokus_field=fokus_field,
+                    **_konteks_pendamping(request, jumlah),
+                ),
             )
-            if errors:
-                for e in errors:
-                    messages.error(request, e)
-            else:
-                log_action(request, "EDIT_PENGAJUAN", "Pengajuan", pengajuan.pk)
-                messages.success(request, "Pengajuan diperbarui.")
-                return redirect("pas:detail_pengajuan", pk=pengajuan.pk)
     else:
         form = PengajuanForm(instance=pengajuan, user=request.user)
+    konteks = {
+        "pendamping_names": list(pengajuan.pendamping.values_list("nama", flat=True)),
+        "pendamping_niks": list(pengajuan.pendamping.values_list("nik", flat=True)),
+        "pendamping_files": daftar_berkas_pendamping(request),
+    }
+    if request.method == "POST":
+        konteks = _konteks_pendamping(request)
     return render(
         request,
         "pas/buat_pengajuan.html",
-        {
-            "form": form,
-            "pengajuan": pengajuan,
-            "pendamping_names": list(pengajuan.pendamping.values_list("nama", flat=True)),
-        },
+        _isi_form_konteks(
+            form,
+            request.user,
+            pengajuan=pengajuan,
+            **konteks,
+        ),
     )
 
 
@@ -333,9 +499,15 @@ def detail_pengajuan(request, pk):
         return redirect("pas:daftar_pengajuan")
 
     pendamping = pengajuan.pendamping.all()
+    invoice = Invoice.objects.filter(pengajuan=pengajuan).first()
+    # Bukti sudah diunggah pemohon, tinggal menunggu keputusan Komersil
+    bukti_terunggah = invoice.transaksi_menunggu_verifikasi if invoice else None
+    # Transaksi sudah dibuat tetapi bukti belum diunggah
+    belum_bukti = invoice.transaksi_menunggu_bukti if invoice else None
     timeline = _build_timeline(
         pengajuan.status,
         pengajuan.riwayat_status.values_list("status", flat=True),
+        label_current="Bukti Bayar Sudah Diunggah" if bukti_terunggah else None,
     )
 
     return render(
@@ -345,10 +517,14 @@ def detail_pengajuan(request, pk):
             "pengajuan": pengajuan,
             "pendamping": pendamping,
             "timeline": timeline,
+            "invoice": invoice,
+            "bukti_terunggah": bukti_terunggah,
+            "belum_bukti": belum_bukti,
             "catatan_terakhir": _catatan_terakhir(pengajuan),
             "is_komersil": _is_komersil(request.user),
             "is_operasi": _is_operasi(request.user),
             "is_aoch": _is_aoch(request.user),
+            "is_avsec": _is_avsec(request.user),
             "is_petugas": _is_petugas(request.user),
         },
     )
@@ -363,15 +539,36 @@ def submit_pengajuan(request, pk):
     if pengajuan.pendamping.count() < pengajuan.jumlah_pendamping:
         messages.error(
             request,
-            f"Lengkapi dokumen identitas {pengajuan.jumlah_pendamping} pendamping sebelum mengajukan.",
+            f"Lengkapi nama, NIK & dokumen identitas {pengajuan.jumlah_pendamping} "
+            "pendamping sebelum mengajukan.",
         )
         return redirect("pas:edit_pengajuan", pk=pk)
 
-    if _ajukan_pengajuan(pengajuan, request):
-        messages.success(request, "Pengajuan berhasil diajukan.")
-    else:
-        messages.error(request, "Pengajuan ditolak karena terdaftar dalam daftar hitam.")
-    return redirect("pas:detail_pengajuan", pk=pk)
+    hits = _identitas_hitam(pengajuan)
+    nama_hit = _blacklist_hit(pengajuan.nama_pemohon, pengajuan.instansi_pemohon)
+    if nama_hit:
+        hits.append(nama_hit)
+    if hits:
+        daftar = ", ".join(
+            sorted({normalisasi_nik(h.nik) or h.nama for h in hits})
+        )
+        messages.error(
+            request,
+            f"Ada identitas yang terdaftar dalam daftar hitam ({daftar}). "
+            "Pengajuan tidak dapat dikirim.",
+        )
+        log_action(request, "TOLAK_BLACKLIST_NIK", "Pengajuan", pk, new_value=daftar)
+        return redirect("pas:edit_pengajuan", pk=pk)
+
+    invoice = _ajukan_ke_pembayaran(pengajuan, request)
+    ids = request.session.get("lacak_pengajuan", [])
+    if pengajuan.pk not in ids:
+        ids.append(pengajuan.pk)
+    request.session["lacak_pengajuan"] = ids[-20:]
+    messages.success(
+        request, "Pengajuan lolos pengecekan identitas. Silakan lakukan pembayaran."
+    )
+    return redirect("pembayaran:bayar", invoice_id=invoice.pk)
 
 
 def pengajuan_sukses(request):
@@ -405,6 +602,7 @@ def lacak_detail(request, pk):
         return redirect("pas:lacak_pengajuan")
     pengajuan = get_object_or_404(Pengajuan.objects.select_related("layanan"), pk=pk)
     invoice = Invoice.objects.filter(pengajuan=pengajuan).first()
+    menunggu_verifikasi = invoice.transaksi_menunggu_verifikasi if invoice else None
     return render(
         request,
         "pas/lacak_detail.html",
@@ -413,9 +611,14 @@ def lacak_detail(request, pk):
             "timeline": _build_timeline(
                 pengajuan.status,
                 pengajuan.riwayat_status.values_list("status", flat=True),
+                label_current=(
+                    "Bukti Bayar Sudah Diunggah" if menunggu_verifikasi else None
+                ),
             ),
             "catatan_terakhir": _catatan_terakhir(pengajuan),
             "invoice": invoice,
+            "menunggu_bukti": invoice.transaksi_menunggu_bukti if invoice else None,
+            "menunggu_verifikasi": menunggu_verifikasi,
         },
     )
 
@@ -424,19 +627,82 @@ def lacak_detail(request, pk):
 
 @login_required
 def verifikasi_list(request):
+    """Antrean Komersil: validasi bukti bayar & penerusan ke Operasi."""
     if not _is_komersil(request.user):
         return redirect("dashboard:home")
     query = Pengajuan.objects.filter(
         status__in=[
-            Pengajuan.Status.DIAJUKAN,
-            Pengajuan.Status.VERIFIKASI_KOMERSIL,
+            Pengajuan.Status.DIBAYAR,
+            Pengajuan.Status.MENUNGGU_OPERASI,
         ]
     ).select_related("layanan", "pemohon").prefetch_related("pendamping")
-    return render(request, "pas/verifikasi_list.html", {"pengajuan": query})
+    bukti_bayar = (
+        PaymentTransaction.objects.filter(
+            status=PaymentTransaction.Status.PENDING,
+            manual__isnull=False,
+        )
+        .select_related("invoice__pengajuan__pemohon", "payment_method")
+        .order_by("-created_at")
+    )
+    return render(
+        request,
+        "pas/verifikasi_list.html",
+        {"pengajuan": query, "bukti_bayar": bukti_bayar},
+    )
+
+
+@login_required
+@require_POST
+def lanjutkan_operasi(request, pk):
+    """Komersil: bukti bayar sudah valid -> teruskan pengajuan ke Operasi."""
+    if not _is_komersil(request.user):
+        return redirect("dashboard:home")
+    pengajuan = get_object_or_404(
+        Pengajuan.objects.select_related("layanan", "pemohon"), pk=pk
+    )
+    if pengajuan.status != Pengajuan.Status.DIBAYAR:
+        messages.error(request, "Hanya pengajuan berstatus Sudah Dibayar yang bisa diteruskan.")
+        return redirect("pas:verifikasi_list")
+
+    invoice = Invoice.objects.filter(pengajuan=pengajuan).first()
+    lunas = invoice is not None and invoice.status == Invoice.Status.PAID
+    if not lunas:
+        transaksi_bayar = PaymentTransaction.objects.filter(
+            invoice__pengajuan=pengajuan, status=PaymentTransaction.Status.PAID
+        ).exists()
+        lunas = transaksi_bayar
+    if not lunas:
+        messages.error(
+            request,
+            "Pembayaran belum tervalidasi. Validasi bukti bayar terlebih dahulu "
+            "sebelum diteruskan ke Operasi.",
+        )
+        return redirect("pas:verifikasi_list")
+
+    _set_status(pengajuan, Pengajuan.Status.MENUNGGU_OPERASI, request.user)
+    notify_pemohon(
+        pengajuan,
+        "Pembayaran terverifikasi",
+        f"Pembayaran pengajuan {pengajuan.nomor_pengajuan} terverifikasi dan "
+        "telah diteruskan ke Operasi untuk penerbitan PAS.",
+        url=f"/pas/lacak/{pk}/",
+    )
+    notify_role(
+        "OPERASI",
+        "Siap terbitkan PAS",
+        f"Pengajuan {pengajuan.nomor_pengajuan} sudah dibayar & menunggu "
+        "pengecekan ulang daftar hitam serta penerbitan PAS.",
+        url=f"/pas/operasi/{pk}/",
+        pengajuan=pengajuan,
+    )
+    log_action(request, "LANJUT_KE_OPERASI", "Pengajuan", pk)
+    messages.success(request, "Pengajuan diteruskan ke Operasi.")
+    return redirect("pas:verifikasi_list")
 
 
 @login_required
 def verifikasi_dokumen(request, pk):
+    """Review dokumen identitas pendamping (tidak mengubah alur pembayaran)."""
     if not _is_komersil(request.user):
         return redirect("dashboard:home")
     pengajuan = get_object_or_404(
@@ -445,7 +711,6 @@ def verifikasi_dokumen(request, pk):
     pendamping = pengajuan.pendamping.all()
 
     if request.method == "POST":
-        aksi = request.POST.get("aksi")
         for pd in pendamping:
             f_status = f"pd_status_{pd.pk}"
             if f_status in request.POST:
@@ -453,36 +718,8 @@ def verifikasi_dokumen(request, pk):
                 pd.verified_by = request.user
                 pd.verified_at = timezone.now()
                 pd.save()
-
-        catatan = request.POST.get("catatan", "")
-        if aksi == "revisi":
-            _set_status(pengajuan, Pengajuan.Status.REVISI_PEMOHON, request.user, catatan=catatan)
-            notify_pemohon(
-                pengajuan,
-                "Pengajuan perlu revisi",
-                catatan or "Data/dokumen perlu diperbaiki.",
-                url=f"/pas/lacak/{pk}/",
-            )
-            log_action(request, "MINTA_REVISI", "Pengajuan", pk, new_value=catatan)
-            messages.warning(request, "Pemohon diminta melakukan revisi.")
-        elif aksi == "setujui":
-            _set_status(pengajuan, Pengajuan.Status.DISETUJUI_KOMERSIL, request.user, catatan=catatan)
-            _set_status(pengajuan, Pengajuan.Status.MENUNGGU_OPERASI, request.user, catatan=catatan)
-            notify_pemohon(
-                pengajuan,
-                "Data lengkap",
-                "Data pengajuan Anda dinyatakan lengkap oleh Komersil dan menunggu persetujuan Operasi.",
-                url=f"/pas/lacak/{pk}/",
-            )
-            notify_role(
-                "OPERASI",
-                "Pengajuan menunggu keputusan",
-                f"Pengajuan {pengajuan.nomor_pengajuan} siap diputuskan Operasi.",
-                url=f"/pas/operasi/{pk}/",
-                pengajuan=pengajuan,
-            )
-            log_action(request, "SETUJUI_KOMERSIL", "Pengajuan", pk)
-            messages.success(request, "Pengajuan disetujui dan diteruskan ke Operasi.")
+        log_action(request, "VERIFIKASI_DOKUMEN", "Pengajuan", pk)
+        messages.success(request, "Status dokumen pendamping diperbarui.")
         return redirect("pas:verifikasi_dokumen", pk=pk)
 
     return render(
@@ -502,6 +739,7 @@ def operasi_list(request):
         status__in=[
             Pengajuan.Status.MENUNGGU_OPERASI,
             Pengajuan.Status.MENUNGGU_PEMBAYARAN,
+            Pengajuan.Status.BUKTI_TERUNGGAH,
             Pengajuan.Status.DIBAYAR,
             Pengajuan.Status.PAS_TERBIT,
             Pengajuan.Status.ACKNOWLEDGED_AOCH,
@@ -535,42 +773,25 @@ def operasi_proses(request, pk):
             )
             log_action(request, "TOLAK_OPERASI", "Pengajuan", pk, new_value=alasan)
             messages.warning(request, "Pengajuan ditolak.")
-        elif aksi == "SETUJUI":
-            hit = _blacklist_hit(pengajuan.nama_pemohon, pengajuan.instansi_pemohon)
-            if hit:
-                alasan = f"Terdaftar dalam daftar hitam: {hit.nama}. {hit.alasan}".strip()
-                _set_status(pengajuan, Pengajuan.Status.DITOLAK_OPERASI, request.user, catatan=alasan)
-                notify_pemohon(
-                    pengajuan,
-                    "Pengajuan ditolak",
-                    alasan,
-                    url=f"/pas/lacak/{pk}/",
-                )
-                log_action(request, "TOLAK_BLACKLIST", "Pengajuan", pk, new_value=hit.nama)
-                messages.error(request, "Pengajuan ditolak karena daftar hitam.")
-            else:
-                _set_status(pengajuan, Pengajuan.Status.DISETUJUI_OPERASI, request.user)
-                _set_status(pengajuan, Pengajuan.Status.MENUNGGU_PEMBAYARAN, request.user)
-                get_or_create_invoice(pengajuan)
-                notify_pemohon(
-                    pengajuan,
-                    "Pengajuan disetujui Operasi",
-                    f"Total pembayaran: Rp{format_rupiah(pengajuan.total)}. Silakan lakukan pembayaran.",
-                    url=f"/pas/lacak/{pk}/",
-                )
-                notify_role(
-                    "AOCH",
-                    "Pengajuan disetujui",
-                    f"Pengajuan {pengajuan.nomor_pengajuan} disetujui Operasi.",
-                    url=f"/pas/lacak/{pk}/",
-                )
-                log_action(request, "SETUJUI_OPERASI", "Pengajuan", pk)
-                messages.success(request, "Pengajuan disetujui. Link pembayaran aktif.")
+            return redirect("pas:operasi_list")
         return redirect("pas:operasi_proses", pk=pk)
+
+    # Pengecekan ulang NIK & nama terhadap daftar hitam (notif dari Komersil)
+    hitam = _identitas_hitam(pengajuan)
+    nama_hit = _blacklist_hit(pengajuan.nama_pemohon, pengajuan.instansi_pemohon)
+    if nama_hit and nama_hit not in hitam:
+        hitam.append(nama_hit)
+    invoice = Invoice.objects.filter(pengajuan=pengajuan).first()
     return render(
         request,
         "pas/operasi_proses.html",
-        {"pengajuan": pengajuan, "pendamping": pendamping},
+        {
+            "pengajuan": pengajuan,
+            "pendamping": pendamping,
+            "hitam": hitam,
+            "invoice": invoice,
+            "catatan_terakhir": _catatan_terakhir(pengajuan),
+        },
     )
 
 
@@ -578,28 +799,100 @@ def operasi_proses(request, pk):
 def terbitkan_pas(request, pk):
     if not _is_operasi(request.user):
         return redirect("dashboard:home")
-    pengajuan = get_object_or_404(Pengajuan, pk=pk)
+    pengajuan = get_object_or_404(
+        Pengajuan.objects.select_related("layanan", "pemohon"), pk=pk
+    )
     if request.method == "POST" and pengajuan.status in (
+        Pengajuan.Status.MENUNGGU_OPERASI,
         Pengajuan.Status.DIBAYAR,
         Pengajuan.Status.ACKNOWLEDGED_AOCH,
     ):
+        # Cek ulang NIK & nama sebelum PAS diterbitkan
+        hitam = _identitas_hitam(pengajuan)
+        nama_hit = _blacklist_hit(pengajuan.nama_pemohon, pengajuan.instansi_pemohon)
+        if nama_hit and nama_hit not in hitam:
+            hitam.append(nama_hit)
+        if hitam:
+            alasan = "; ".join(
+                f"{normalisasi_nik(h.nik) or h.nama} — {h.nama}: {h.alasan}".strip()
+                for h in hitam
+            )
+            _set_status(
+                pengajuan,
+                Pengajuan.Status.DITOLAK_OPERASI,
+                request.user,
+                catatan=alasan,
+            )
+            notify_pemohon(
+                pengajuan,
+                "PAS tidak diterbitkan",
+                f"Identitas terdaftar dalam daftar hitam: {alasan}",
+                url=f"/pas/lacak/{pk}/",
+            )
+            log_action(
+                request,
+                "TOLAK_BLACKLIST",
+                "Pengajuan",
+                pk,
+                new_value=", ".join(normalisasi_nik(h.nik) or h.nama for h in hitam),
+            )
+            messages.error(
+                request,
+                "PAS tidak diterbitkan — ada identitas dalam daftar hitam. "
+                "Hubungi Operasi bila data perlu dikoreksi.",
+            )
+            return redirect("pas:operasi_proses", pk=pk)
+
+        pengajuan.tanggal_berlaku_pas = timezone.localdate()
+        pengajuan.save(update_fields=["tanggal_berlaku_pas", "updated_at"])
         _set_status(pengajuan, Pengajuan.Status.PAS_TERBIT, request.user)
         notify_pemohon(
             pengajuan,
             "PAS diterbitkan",
-            f"PAS untuk pengajuan {pengajuan.nomor_pengajuan} telah diterbitkan. "
-            "Silakan diambil di Operasi.",
+            f"PAS untuk pengajuan {pengajuan.nomor_pengajuan} telah diterbitkan dan "
+            f"berlaku pada {pengajuan.tanggal_berlaku_pas:%d-%m-%Y} (satu hari). "
+            "Penyerahan fisiknya dicatat oleh petugas Avsec.",
             url=f"/pas/lacak/{pk}/",
         )
         notify_role(
             "AOCH",
+            "PAS diterbitkan — siap diserahkan",
+            f"PAS untuk pengajuan {pengajuan.nomor_pengajuan} telah diterbitkan oleh "
+            "Operasi. Silakan input nomor PAS visitor bagi tiap pendamping.",
+            url=f"/pas/aoch/{pk}/proses/",
+            pengajuan=pengajuan,
+        )
+        notify_role(
+            "AVSEC",
+            "PAS diterbitkan — siap diserahkan",
+            f"PAS fisik untuk pengajuan {pengajuan.nomor_pengajuan} siap diserahkan "
+            "kepada pemohon. Catat penyerahan, foto & tanda tangan elektronik.",
+            url=f"/pas/avsec/{pk}/proses/",
+            pengajuan=pengajuan,
+        )
+        notify_role(
+            "KOMERSIL",
             "PAS diterbitkan",
-            f"PAS untuk pengajuan {pengajuan.nomor_pengajuan} telah diterbitkan oleh Operasi.",
+            f"PAS pengajuan {pengajuan.nomor_pengajuan} terbit, berlaku satu hari "
+            f"pada {pengajuan.tanggal_berlaku_pas:%d-%m-%Y}.",
+            url=f"/pas/pengajuan/{pk}/",
+            pengajuan=pengajuan,
+        )
+        notify_role(
+            "OPERASI",
+            "PAS diterbitkan",
+            f"PAS pengajuan {pengajuan.nomor_pengajuan} terbit, berlaku satu hari "
+            f"pada {pengajuan.tanggal_berlaku_pas:%d-%m-%Y}.",
             url=f"/pas/pengajuan/{pk}/",
             pengajuan=pengajuan,
         )
         log_action(request, "TERBITKAN_PAS", "Pengajuan", pk)
-        messages.success(request, "PAS diterbitkan. Pemohon diberitahu untuk mengambil PAS di Operasi.")
+        messages.success(
+            request,
+            f"PAS diterbitkan, berlaku {pengajuan.tanggal_berlaku_pas:%d-%m-%Y} "
+            "(satu hari). AOCH diinformasikan untuk input nomor PAS dan Avsec "
+            "untuk mencatat penyerahan.",
+        )
     return redirect("pas:operasi_proses", pk=pk)
 
 
@@ -637,6 +930,7 @@ def aoch_list(request):
         return redirect("dashboard:home")
     query = Pengajuan.objects.filter(
         status__in=[
+            Pengajuan.Status.MENUNGGU_OPERASI,
             Pengajuan.Status.DIBAYAR,
             Pengajuan.Status.ACKNOWLEDGED_AOCH,
             Pengajuan.Status.PAS_TERBIT,
@@ -644,8 +938,236 @@ def aoch_list(request):
             Pengajuan.Status.DILAKSANAKAN,
             Pengajuan.Status.SELESAI,
         ]
-    ).select_related("layanan", "pemohon").prefetch_related("pendamping")
+    ).select_related("layanan", "pemohon").prefetch_related(
+        "pendamping", "serah_terima"
+    )
     return render(request, "pas/aoch_list.html", {"pengajuan": query})
+
+
+def _simpan_ttd(data_url):
+    """Ubah tanda tangan elektronik (data URL PNG) menjadi file gambar."""
+    import base64 as _base64
+
+    from django.core.files.base import ContentFile
+
+    if not data_url or "base64," not in data_url:
+        return None
+    try:
+        meta, encoded = data_url.split("base64,", 1)
+        raw = _base64.b64decode(encoded)
+    except (ValueError, TypeError):
+        return None
+    ext = "png" if "png" in meta else "jpg"
+    return ContentFile(raw, name=f"ttd_{timezone.now():%Y%m%d%H%M%S}.{ext}")
+
+
+@login_required
+def aoch_proses(request, pk):
+    """AOCH: input nomor PAS visitor. Penyerahan fisik dicatat petugas Avsec."""
+    if not _is_aoch(request.user):
+        return redirect("dashboard:home")
+    pengajuan = get_object_or_404(
+        Pengajuan.objects.select_related("layanan", "pemohon"), pk=pk
+    )
+    pendamping = list(pengajuan.pendamping.all())
+    serah = SerahTerimaPAS.objects.filter(pengajuan=pengajuan).first()
+
+    if request.method == "POST" and request.POST.get("aksi") == "simpan_nomor":
+        if pengajuan.status not in (
+            Pengajuan.Status.PAS_TERBIT,
+            Pengajuan.Status.ACKNOWLEDGED_AOCH,
+            Pengajuan.Status.SIAP_DILAKSANAKAN,
+            Pengajuan.Status.DILAKSANAKAN,
+        ):
+            messages.error(
+                request,
+                "PAS belum diterbitkan oleh Operasi — nomor PAS belum bisa disimpan.",
+            )
+            return redirect("pas:aoch_proses", pk=pk)
+        kosong = []
+        dipakai = []
+        for pd in pendamping:
+            nomor = (request.POST.get(f"nomor_pas_{pd.pk}") or "").strip()
+            if not nomor:
+                kosong.append(pd.nama)
+                continue
+            bentrok = (
+                DokumenPendamping.objects.filter(nomor_pas__iexact=nomor)
+                .exclude(pk=pd.pk)
+                .exists()
+            )
+            if bentrok:
+                dipakai.append(f"{nomor} ({pd.nama})")
+        if kosong:
+            messages.error(
+                request,
+                "Nomor PAS wajib diisi untuk: " + ", ".join(kosong) + ".",
+            )
+        elif dipakai:
+            messages.error(
+                request,
+                "Nomor PAS sudah dipakai pada pendamping lain: "
+                + ", ".join(dipakai) + ".",
+            )
+        else:
+            for pd in pendamping:
+                nomor = (request.POST.get(f"nomor_pas_{pd.pk}") or "").strip()
+                if nomor and nomor != pd.nomor_pas:
+                    pd.nomor_pas = nomor
+                    pd.save(update_fields=["nomor_pas"])
+            log_action(request, "INPUT_NOMOR_PAS", "Pengajuan", pk)
+            messages.success(request, "Nomor PAS pendamping tersimpan.")
+        return redirect("pas:aoch_proses", pk=pk)
+
+    return render(
+        request,
+        "pas/aoch_proses.html",
+        {
+            "pengajuan": pengajuan,
+            "pendamping": pendamping,
+            "serah": serah,
+        },
+    )
+
+
+# ---------- Avsec (serah terima fisik PAS) ----------
+
+@login_required
+def avsec_list(request):
+    if not _is_avsec(request.user):
+        return redirect("dashboard:home")
+    query = (
+        Pengajuan.objects.filter(
+            status__in=[
+                Pengajuan.Status.PAS_TERBIT,
+                Pengajuan.Status.DILAKSANAKAN,
+                Pengajuan.Status.SELESAI,
+            ]
+        )
+        .select_related("layanan", "pemohon")
+        .prefetch_related("pendamping", "serah_terima")
+    )
+    return render(request, "pas/avsec_list.html", {"pengajuan": query})
+
+
+@login_required
+def avsec_serah_terima(request, pk):
+    """Petugas Avsec: serahkan & terima kembali fisik PAS (foto + TTD)."""
+    if not _is_avsec(request.user):
+        return redirect("dashboard:home")
+    pengajuan = get_object_or_404(
+        Pengajuan.objects.select_related("layanan", "pemohon"), pk=pk
+    )
+    pendamping = list(pengajuan.pendamping.all())
+    serah, _ = SerahTerimaPAS.objects.get_or_create(
+        pengajuan=pengajuan,
+        defaults={
+            "penerima_nama": pengajuan.pic_nama,
+            "penerima_nik": pengajuan.pic_nomor_identitas,
+            "penerima_jabatan": pengajuan.pic_jabatan,
+        },
+    )
+
+    if request.method == "POST":
+        aksi = request.POST.get("aksi")
+
+        if aksi == "serahkan":
+            belum = [pd.nama for pd in pendamping if not pd.nomor_pas]
+            if belum:
+                messages.error(
+                    request,
+                    "Nomor PAS belum diinput AOCH untuk: " + ", ".join(belum) + ".",
+                )
+                return redirect("pas:avsec_serah_terima", pk=pk)
+            foto = request.FILES.get("foto")
+            ttd = _simpan_ttd(request.POST.get("ttd_data", ""))
+            penerima = (request.POST.get("penerima_nama") or "").strip()
+            if not foto and not serah.foto_penyerahan:
+                messages.error(request, "Foto penyerahan wajib diunggah.")
+                return redirect("pas:avsec_serah_terima", pk=pk)
+            if ttd is None and not serah.ttd_elektronik:
+                messages.error(request, "Tanda tangan elektronik wajib dibuat.")
+                return redirect("pas:avsec_serah_terima", pk=pk)
+            if not penerima:
+                messages.error(request, "Nama penerima (PIC/wakil) wajib diisi.")
+                return redirect("pas:avsec_serah_terima", pk=pk)
+            serah.status = SerahTerimaPAS.Status.DITERIMA
+            serah.penerima_nama = penerima
+            serah.penerima_nik = (request.POST.get("penerima_nik") or "").strip()
+            serah.penerima_jabatan = (request.POST.get("penerima_jabatan") or "").strip()
+            serah.penerima_delegasi = (request.POST.get("penerima_delegasi") or "").strip()
+            serah.petugas = request.user
+            if foto:
+                serah.foto_penyerahan = foto
+            if ttd is not None:
+                serah.ttd_elektronik = ttd
+            serah.tanggal_penyerahan = serah.tanggal_penyerahan or timezone.now()
+            serah.catatan = (request.POST.get("catatan") or "").strip()
+            serah.save()
+            if pengajuan.status == Pengajuan.Status.PAS_TERBIT:
+                _set_status(pengajuan, Pengajuan.Status.DILAKSANAKAN, request.user)
+            notify_pemohon(
+                pengajuan,
+                "PAS diserahkan",
+                f"PAS pengajuan {pengajuan.nomor_pengajuan} diserahkan kepada "
+                f"{penerima} pada {serah.tanggal_penyerahan:%d-%m-%Y %H:%M} WIB "
+                "oleh petugas Avsec. PAS berlaku satu hari dan wajib dikembalikan "
+                "setelah digunakan.",
+                url=f"/pas/lacak/{pk}/",
+            )
+            log_action(
+                request,
+                "SERAH_PAS",
+                "SerahTerimaPAS",
+                serah.pk,
+                new_value=penerima,
+            )
+            messages.success(request, "Penyerahan PAS tercatat.")
+            return redirect("pas:avsec_serah_terima", pk=pk)
+
+        if aksi == "kembalikan":
+            if serah.status != SerahTerimaPAS.Status.DITERIMA:
+                messages.error(request, "PAS belum diserahkan, tidak bisa dikembalikan.")
+                return redirect("pas:avsec_serah_terima", pk=pk)
+            serah.status = SerahTerimaPAS.Status.DIKEMBALIKAN
+            serah.tanggal_pengembalian = timezone.now()
+            serah.petugas = request.user
+            serah.save()
+            notify_pemohon(
+                pengajuan,
+                "PAS dikembalikan",
+                f"PAS pengajuan {pengajuan.nomor_pengajuan} diterima kembali oleh "
+                f"petugas Avsec pada {serah.tanggal_pengembalian:%d-%m-%Y %H:%M} WIB.",
+                url=f"/pas/lacak/{pk}/",
+            )
+            log_action(request, "KEMBALI_PAS", "SerahTerimaPAS", serah.pk)
+            messages.success(request, "Pengembalian PAS tercatat.")
+            return redirect("pas:avsec_serah_terima", pk=pk)
+
+        if aksi == "selesai":
+            if serah.status == SerahTerimaPAS.Status.DIKEMBALIKAN:
+                _set_status(pengajuan, Pengajuan.Status.SELESAI, request.user)
+                notify_pemohon(
+                    pengajuan,
+                    "Layanan selesai",
+                    f"Pengajuan {pengajuan.nomor_pengajuan} selesai — PAS telah "
+                    "dikembalikan.",
+                    url=f"/pas/lacak/{pk}/",
+                )
+                messages.success(request, "Pengajuan ditandai selesai.")
+            return redirect("pas:avsec_serah_terima", pk=pk)
+
+        return redirect("pas:avsec_serah_terima", pk=pk)
+
+    return render(
+        request,
+        "pas/avsec_proses.html",
+        {
+            "pengajuan": pengajuan,
+            "pendamping": pendamping,
+            "serah": serah,
+        },
+    )
 
 
 @login_required
@@ -665,3 +1187,177 @@ def aoch_acknowledge(request, pk):
         log_action(request, "ACKNOWLEDGE_AOCH", "Pengajuan", pk)
         messages.success(request, "Pengajuan telah diakui (acknowledged).")
     return redirect("pas:aoch_list")
+
+
+# ---------- Master Layanan (Komersil) ----------
+
+@login_required
+def layanan_list(request):
+    if not _is_komersil(request.user):
+        return redirect("dashboard:home")
+    query = Layanan.objects.all().order_by("lokasi", "nama_layanan")
+    return render(
+        request,
+        "pas/layanan_list.html",
+        {
+            "layanan": query,
+            "departure": query.filter(lokasi=Layanan.Lokasi.DEPARTURE),
+            "arrival": query.filter(lokasi=Layanan.Lokasi.ARRIVAL),
+        },
+    )
+
+
+@login_required
+def layanan_form(request, pk=None):
+    if not _is_komersil(request.user):
+        return redirect("dashboard:home")
+    instance = None
+    if pk is not None:
+        instance = get_object_or_404(Layanan, pk=pk)
+    if request.method == "POST":
+        form = LayananForm(request.POST, instance=instance)
+        if form.is_valid():
+            layanan = form.save()
+            log_action(
+                request,
+                "SIMPAN_LAYANAN" if instance is None else "EDIT_LAYANAN",
+                "Layanan",
+                layanan.pk,
+                new_value=layanan.nama_layanan,
+            )
+            messages.success(
+                request,
+                "Layanan berhasil ditambahkan."
+                if instance is None
+                else "Layanan berhasil diperbarui.",
+            )
+            return redirect("pas:layanan_list")
+    else:
+        form = LayananForm(instance=instance)
+    return render(
+        request,
+        "pas/layanan_form.html",
+        {"form": form, "layanan": instance},
+    )
+
+
+@login_required
+@require_POST
+def layanan_hapus(request, pk):
+    if not _is_komersil(request.user):
+        return redirect("dashboard:home")
+    layanan = get_object_or_404(Layanan, pk=pk)
+    try:
+        layanan.delete()
+        log_action(request, "HAPUS_LAYANAN", "Layanan", pk, old_value=layanan.nama_layanan)
+        messages.success(request, f"Layanan {layanan.nama_layanan} dihapus.")
+    except ProtectedError:
+        layanan.aktif = False
+        layanan.save(update_fields=["aktif", "updated_at"])
+        log_action(request, "NONAKTIF_LAYANAN", "Layanan", pk, new_value=layanan.nama_layanan)
+        messages.warning(
+            request,
+            f"Layanan {layanan.nama_layanan} masih dipakai pengajuan, "
+            "dinonaktifkan sebagai gantinya.",
+        )
+    return redirect("pas:layanan_list")
+
+
+# ---------- Daftar Hitam (Operasi) ----------
+
+@login_required
+def hitam_list(request):
+    if not _is_operasi(request.user):
+        return redirect("dashboard:home")
+    query = DaftarHitam.objects.all()
+    return render(request, "pas/hitam_list.html", {"daftar": query})
+
+
+@login_required
+def hitam_form(request, pk=None):
+    if not _is_operasi(request.user):
+        return redirect("dashboard:home")
+    instance = None
+    if pk is not None:
+        instance = get_object_or_404(DaftarHitam, pk=pk)
+    if request.method == "POST":
+        form = DaftarHitamForm(request.POST, instance=instance)
+        if form.is_valid():
+            entri = form.save()
+            log_action(
+                request,
+                "SIMPAN_DAFTAR_HITAM" if instance is None else "EDIT_DAFTAR_HITAM",
+                "DaftarHitam",
+                entri.pk,
+                new_value=entri.nama,
+            )
+            messages.success(
+                request,
+                "Data daftar hitam ditambahkan."
+                if instance is None
+                else "Data daftar hitam diperbarui.",
+            )
+            return redirect("pas:hitam_list")
+    else:
+        form = DaftarHitamForm(instance=instance)
+    return render(
+        request,
+        "pas/hitam_form.html",
+        {"form": form, "entri": instance},
+    )
+
+
+@login_required
+@require_POST
+def hitam_hapus(request, pk):
+    if not _is_operasi(request.user):
+        return redirect("dashboard:home")
+    entri = get_object_or_404(DaftarHitam, pk=pk)
+    entri.delete()
+    log_action(request, "HAPUS_DAFTAR_HITAM", "DaftarHitam", pk, old_value=entri.nama)
+    messages.success(request, f"Entri {entri.nama} dihapus dari daftar hitam.")
+    return redirect("pas:hitam_list")
+
+
+# ---------- Verifikasi PAS (Avsec / dashboard awal) ----------
+
+def verifikasi_pas(request):
+    """Menu verifikasi: masukkan nomor request atau nomor PAS visitor
+    untuk melihat status Aktif / Kedaluwarsa. Terbuka untuk petugas & publik.
+    """
+    hasil = None
+    query = ""
+    if request.method == "POST":
+        query = (request.POST.get("nomor") or "").strip()
+        pengajuan = Pengajuan.objects.filter(
+            Q(nomor_pengajuan__iexact=query)
+        ).select_related("layanan").prefetch_related("pendamping", "serah_terima").first()
+        if pengajuan is None and query:
+            pd = (
+                DokumenPendamping.objects.filter(nomor_pas__iexact=query)
+                .select_related("pengajuan__layanan")
+                .prefetch_related("pengajuan__serah_terima")
+                .first()
+            )
+            if pd:
+                pengajuan = pd.pengajuan
+        if pengajuan:
+            try:
+                serah = pengajuan.serah_terima
+            except SerahTerimaPAS.DoesNotExist:
+                serah = None
+            hasil = {
+                "pengajuan": pengajuan,
+                "serah": serah,
+                "pendamping": list(pengajuan.pendamping.all()),
+                "ditemukan": True,
+            }
+        else:
+            hasil = {"ditemukan": False}
+        log_action(request, "VERIFIKASI_PAS", "Pengajuan", pengajuan.pk if pengajuan else "", new_value=query)
+    return render(
+        request,
+        "pas/verifikasi_pas.html",
+        {"hasil": hasil, "query": query},
+    )
+

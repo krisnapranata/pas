@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Tambah User{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="mb-3">Tambah User Baru</h5>
+                <div class="alert alert-info">
+                    Akun baru dibuat dengan peran <strong>{{ nama_role }}</strong>.
+                    Setelah disimpan, klik <strong>Lihat</strong> pada daftar user untuk
+                    menampilkan username &amp; password.
+                </div>
+                <form method="post">
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Username <span class="text-danger">*</span></label>
+                            {{ form.username }}
+                            {{ form.username.errors }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Password <span class="text-danger">*</span></label>
+                            {{ form.password }}
+                            {{ form.password.errors }}
+                            {% if form.password.help_text %}<div class="form-text">{{ form.password.help_text }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Nama Depan <span class="text-danger">*</span></label>
+                            {{ form.first_name }}
+                            {{ form.first_name.errors }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Nama Belakang</label>
+                            {{ form.last_name }}
+                            {{ form.last_name.errors }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Jabatan</label>
+                            {{ form.jabatan }}
+                            {{ form.jabatan.errors }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Nomor HP</label>
+                            {{ form.phone }}
+                            {{ form.phone.errors }}
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary">Simpan User</button>
+                        <a href="{% url 'accounts:user_tim' %}" class="btn btn-outline-secondary">Batal</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

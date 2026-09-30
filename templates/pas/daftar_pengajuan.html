@@ -19,7 +19,7 @@
                 <td>{{ p.tanggal_pelaksanaan|date:"d-m-Y" }}</td>
                 <td>{{ p.jumlah_pendamping }}</td>
                 <td>Rp {{ p.total|rupiah }}</td>
-                <td><span class="badge text-bg-secondary">{{ p.get_status_display }}</span></td>
+                <td><span class="badge text-bg-{% if p.status == 'BUKTI_TERUNGGAH' %}warning text-dark{% elif p.status == 'DIBAYAR' or p.status == 'PAS_TERBIT' or p.status == 'SELESAI' %}success{% elif p.status == 'DITOLAK_OPERASI' or p.status == 'DIBATALKAN' %}danger{% else %}secondary{% endif %}">{{ p.get_status_display }}</span></td>
                 <td><a href="{% url 'pas:detail_pengajuan' p.pk %}" class="btn btn-sm btn-outline-primary">Detail</a></td>
             </tr>
             {% empty %}

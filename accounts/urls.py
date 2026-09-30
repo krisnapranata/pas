@@ -13,4 +13,6 @@ urlpatterns = [
     path("register/kirim-ulang/", views.kirim_ulang_konfirmasi, name="kirim_ulang_konfirmasi"),
     path("logout/", views.logout_view, name="logout"),
     path("profil/", views.profil_view, name="profil"),
+    path("tim/", views.user_tim_list, name="user_tim"),
+    path("tim/buat/", views.user_tim_buat, name="user_tim_buat"),
 ]

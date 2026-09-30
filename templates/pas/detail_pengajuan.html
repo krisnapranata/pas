@@ -6,7 +6,7 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="mb-0">{{ pengajuan.nomor_pengajuan }}</h4>
-    <span class="badge text-bg-primary fs-6">{{ pengajuan.get_status_display }}</span>
+    <span class="badge text-bg-primary fs-6">{% if bukti_terunggah and pengajuan.status == 'MENUNGGU_PEMBAYARAN' %}Bukti Bayar Sudah Diunggah{% else %}{{ pengajuan.get_status_display }}{% endif %}</span>
 </div>
 
 {% if pengajuan.catatan %}
@@ -20,7 +20,19 @@
 {% endif %}
 
 {% if pengajuan.status == 'PAS_TERBIT' %}
-<div class="alert alert-success"><strong>PAS telah diterbitkan.</strong> Silakan ambil kartu PAS Anda di Operasi.</div>
+<div class="alert alert-success"><strong>PAS telah diterbitkan.</strong>
+    {% if pengajuan.tanggal_berlaku_pas %}
+    Berlaku pada <strong>{{ pengajuan.tanggal_berlaku_pas|date:"d M Y" }}</strong> (satu hari)
+    — status: <strong>{{ pengajuan.status_masa_berlaku }}</strong>.
+    {% endif %}
+    Penyerahan &amp; pengembalian dicatat oleh AOCH.
+</div>
+{% elif pengajuan.tanggal_berlaku_pas %}
+<div class="alert alert-{% if pengajuan.status_masa_berlaku == 'KEDALUWARSA' %}danger{% elif pengajuan.status_masa_berlaku == 'AKTIF' %}success{% else %}info{% endif %}">
+    Masa berlaku PAS: <strong>{{ pengajuan.tanggal_berlaku_pas|date:"d M Y" }}</strong>
+    s.d. <strong>{{ pengajuan.masa_berlaku_habis|date:"d M Y" }}</strong>
+    — status: <strong>{{ pengajuan.status_masa_berlaku }}</strong>.
+</div>
 {% endif %}
 
 <div class="row g-3">
@@ -33,7 +45,6 @@
                     <tr><th>Tanggal Pelaksanaan</th><td>{{ pengajuan.tanggal_pelaksanaan|date:"d M Y" }}{% if pengajuan.waktu_kedatangan %} ({{ pengajuan.waktu_kedatangan|time:"H:i" }}){% endif %}</td></tr>
                     <tr><th>Nomor Penerbangan</th><td>{{ pengajuan.nomor_penerbangan|default:"-" }}</td></tr>
                     <tr><th>Asal Penerbangan</th><td>{{ pengajuan.asal_penerbangan|default:"-" }}</td></tr>
-                    <tr><th>Tujuan/Instansi</th><td>{{ pengajuan.tujuan|default:"-" }}</td></tr>
                     <tr><th>Jumlah Tamu</th><td>{{ pengajuan.jumlah_tamu }}</td></tr>
                     <tr><th>Jumlah Pendamping</th><td>{{ pengajuan.jumlah_pendamping }}</td></tr>
                     <tr><th>Keterangan</th><td>{{ pengajuan.keterangan|default:"-" }}</td></tr>
@@ -114,8 +125,38 @@
                 </div>
             </div>
             {% endif %}
-        {% elif pengajuan.status == 'MENUNGGU_PEMBAYARAN' %}
-            {% if not is_petugas %}
+        {% elif pengajuan.status == 'MENUNGGU_PEMBAYARAN' or pengajuan.status == 'BUKTI_TERUNGGAH' %}
+            {% if bukti_terunggah %}
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="alert alert-info py-2 mb-2">
+                        Bukti pembayaran sudah diunggah — <strong>menunggu verifikasi petugas Komersil</strong>.
+                        Anda boleh mengganti bukti bila ada kesalahan file.
+                    </div>
+                    {% if not is_petugas %}
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="{% url 'pembayaran:upload_bukti' bukti_terunggah.pk %}" class="btn btn-primary">Ganti Bukti Bayar</a>
+                        <a href="{% url 'pembayaran:detail_transaksi' bukti_terunggah.pk %}" class="btn btn-outline-secondary">Detail Transaksi</a>
+                    </div>
+                    {% endif %}
+                    {% if is_komersil %}
+                    <a href="{% url 'pembayaran:verifikasi_manual' bukti_terunggah.pk %}" class="btn btn-success">Verifikasi Bukti Bayar</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% elif belum_bukti %}
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="alert alert-info py-2 mb-2">
+                        Transaksi pembayaran sudah dibuat — langkah berikutnya <strong>unggah bukti pembayaran</strong>.
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="{% url 'pembayaran:upload_bukti' belum_bukti.pk %}" class="btn btn-primary">Upload Bukti Bayar</a>
+                        <a href="{% url 'pembayaran:bayar' invoice.pk %}?pilih_lain=1" class="btn btn-outline-secondary">Pilih Metode Lain</a>
+                    </div>
+                </div>
+            </div>
+            {% elif not is_petugas %}
             <div class="card shadow-sm">
                 <div class="card-body">
                     <p class="mb-2">Link pembayaran aktif.</p>
@@ -123,20 +164,29 @@
                 </div>
             </div>
             {% endif %}
-        {% elif pengajuan.status == 'DIAJUKAN' or pengajuan.status == 'VERIFIKASI_KOMERSIL' %}
-            {% if is_komersil %}
-            <a href="{% url 'pas:verifikasi_dokumen' pengajuan.pk %}" class="btn btn-primary">Verifikasi Dokumen</a>
-            {% endif %}
-        {% elif pengajuan.status == 'MENUNGGU_OPERASI' %}
-            {% if is_operasi %}
-            <a href="{% url 'pas:operasi_proses' pengajuan.pk %}" class="btn btn-primary">Proses Persetujuan</a>
-            {% endif %}
         {% elif pengajuan.status == 'DIBAYAR' %}
+            {% if is_komersil %}
+            <a href="{% url 'pas:verifikasi_list' %}" class="btn btn-success">Lanjut ke Operasi</a>
+            {% endif %}
+            {% if is_operasi %}
+            <a href="{% url 'pas:operasi_proses' pengajuan.pk %}" class="btn btn-primary">Cek Hitam &amp; Terbitkan PAS</a>
+            {% endif %}
             {% if is_aoch %}
             <form method="post" action="{% url 'pas:aoch_acknowledge' pengajuan.pk %}">
                 {% csrf_token %}
                 <button class="btn btn-success">Acknowledge (AOCH)</button>
             </form>
+            {% endif %}
+        {% elif pengajuan.status == 'MENUNGGU_OPERASI' %}
+            {% if is_operasi %}
+            <a href="{% url 'pas:operasi_proses' pengajuan.pk %}" class="btn btn-primary">Cek Hitam &amp; Terbitkan PAS</a>
+            {% endif %}
+        {% elif pengajuan.status == 'PAS_TERBIT' or pengajuan.status == 'DILAKSANAKAN' %}
+            {% if is_aoch %}
+            <a href="{% url 'pas:aoch_proses' pengajuan.pk %}" class="btn btn-primary">Input Nomor PAS (AOCH)</a>
+            {% endif %}
+            {% if is_avsec %}
+            <a href="{% url 'pas:avsec_serah_terima' pengajuan.pk %}" class="btn btn-primary">Catat Serah Terima (Avsec)</a>
             {% endif %}
         {% endif %}
     </div>

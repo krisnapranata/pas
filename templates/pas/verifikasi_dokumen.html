@@ -1,24 +1,26 @@
 {% extends "base.html" %}
 
-{% block title %}Verifikasi Dokumen{% endblock %}
+{% block title %}Review Dokumen Pendamping{% endblock %}
 
 {% block content %}
-<h4 class="mb-1">Verifikasi Dokumen</h4>
+<h4 class="mb-1">Review Dokumen Identitas Pendamping</h4>
 <p class="text-muted">{{ pengajuan.nomor_pengajuan }} — {{ pengajuan.nama_pemohon }} ({{ pengajuan.layanan.nama_layanan }})</p>
+<p class="text-muted small">
+    Halaman ini hanya untuk menandai kelengkapan dokumen. Alur pengajuan mengikuti:
+    cek NIK daftar hitam → pembayaran → validasi Komersil → penerbitan PAS oleh Operasi.
+</p>
 
 <form method="post">
     {% csrf_token %}
     <div class="card shadow-sm mb-3">
         <div class="card-body">
-            <h6>Data Pemohon & PIC</h6>
+            <h6>PIC Penanggung Jawab</h6>
             <table class="table table-sm">
-                <tr><th style="width:200px">Nama Pemohon</th><td>{{ pengajuan.nama_pemohon }}</td></tr>
-                <tr><th>Instansi/Perusahaan</th><td>{{ pengajuan.instansi_pemohon|default:"-" }}</td></tr>
-                <tr><th>No. HP</th><td>{{ pengajuan.kontak_pemohon|default:"-" }}</td></tr>
-                <tr><th>Nama PIC</th><td>{{ pengajuan.pic_nama|default:"-" }}</td></tr>
-                <tr><th>Jabatan PIC</th><td>{{ pengajuan.pic_jabatan|default:"-" }}</td></tr>
-                <tr><th>No. HP PIC</th><td>{{ pengajuan.pic_no_hp|default:"-" }}</td></tr>
-                <tr><th>Layanan</th><td>{{ pengajuan.layanan.nama_layanan }}</td></tr>
+                <tr><th style="width:200px">Nama PIC</th><td>{{ pengajuan.pic_nama|default:"-" }}</td></tr>
+                <tr><th>Jabatan</th><td>{{ pengajuan.pic_jabatan|default:"-" }}</td></tr>
+                <tr><th>NIK / Nomor Identitas</th><td>{{ pengajuan.pic_nomor_identitas|default:"-" }}</td></tr>
+                <tr><th>No. HP</th><td>{{ pengajuan.pic_no_hp|default:"-" }}</td></tr>
+                <tr><th>Layanan</th><td>{{ pengajuan.layanan.nama_layanan }} ({{ pengajuan.layanan.get_lokasi_display }})</td></tr>
                 <tr><th>Tanggal</th><td>{{ pengajuan.tanggal_pelaksanaan|date:"d M Y" }}</td></tr>
             </table>
         </div>
@@ -27,13 +29,14 @@
     <div class="card shadow-sm mb-3">
         <div class="card-body">
             <h6>Dokumen Identitas Pendamping</h6>
-            <table class="table table-sm">
-                <thead><tr><th>#</th><th>Nama</th><th>Dokumen</th><th>Status</th></tr></thead>
+            <table class="table table-sm align-middle">
+                <thead><tr><th>#</th><th>Nama</th><th>NIK</th><th>Dokumen</th><th>Status</th></tr></thead>
                 <tbody>
                     {% for pd in pendamping %}
                     <tr>
                         <td>{{ pd.urutan }}</td>
                         <td>{{ pd.nama }}</td>
+                        <td class="font-monospace small">{{ pd.nik }}</td>
                         <td style="min-width:160px">
                             {% if pd.is_image %}
                             <a href="{{ pd.file.url }}" target="_blank">
@@ -52,7 +55,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="4" class="text-muted">Tidak ada pendamping.</td></tr>
+                    <tr><td colspan="5" class="text-muted">Tidak ada pendamping.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -61,11 +64,8 @@
 
     <div class="card shadow-sm">
         <div class="card-body">
-            <label class="form-label">Catatan</label>
-            <textarea name="catatan" class="form-control mb-3" rows="2"></textarea>
-            <button type="submit" name="aksi" value="setujui" class="btn btn-success">Setujui & Teruskan ke Operasi</button>
-            <button type="submit" name="aksi" value="revisi" class="btn btn-warning">Minta Revisi</button>
-            <a href="{% url 'pas:verifikasi_list' %}" class="btn btn-outline-secondary">Kembali</a>
+            <button type="submit" class="btn btn-primary">Simpan Status Dokumen</button>
+            <a href="{% url 'pas:detail_pengajuan' pengajuan.pk %}" class="btn btn-outline-secondary">Kembali ke Detail</a>
         </div>
     </div>
 </form>

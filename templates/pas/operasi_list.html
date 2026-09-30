@@ -57,7 +57,7 @@
                 </td>
                 <td><span class="badge text-bg-secondary">{{ p.get_status_display }}</span></td>
                 <td>
-                    {% if p.status == 'DIBAYAR' or p.status == 'ACKNOWLEDGED_AOCH' %}
+                    {% if p.status == 'DIBAYAR' or p.status == 'ACKNOWLEDGED_AOCH' or p.status == 'MENUNGGU_OPERASI' %}
                     <a href="{% url 'pas:operasi_proses' p.pk %}" class="btn btn-sm btn-primary">Terbitkan PAS</a>
                     {% elif p.status == 'PAS_TERBIT' %}
                     <a href="{% url 'pas:operasi_proses' p.pk %}" class="btn btn-sm btn-outline-secondary">Detail</a>

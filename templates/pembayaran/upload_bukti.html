@@ -63,11 +63,20 @@
                         <label class="form-label">Catatan</label>
                         <textarea name="catatan" class="form-control" rows="2">{{ transaksi.manual.catatan|default:'' }}</textarea>
                     </div>
-                    <button type="submit" class="btn btn-primary">{% if transaksi.manual %}Simpan Perubahan{% else %}Upload{% endif %}</button>
-                    <a href="{% url 'pembayaran:detail_transaksi' transaksi.pk %}" class="btn btn-outline-secondary">Kembali</a>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="submit" class="btn btn-primary">{% if transaksi.manual %}Simpan Perubahan{% else %}Upload{% endif %}</button>
+                        <a href="{% url 'pembayaran:detail_transaksi' transaksi.pk %}" class="btn btn-outline-secondary">Detail Transaksi</a>
+                        <a href="{% url 'pembayaran:bayar' transaksi.invoice.pk %}?pilih_lain=1" class="btn btn-outline-secondary">Pilih Metode Lain</a>
+                        {% if user.is_authenticated %}
+                        <a href="{% url 'pembayaran:invoice_saya' %}" class="btn btn-outline-secondary">Invoice Saya</a>
+                        {% else %}
+                        <a href="{% url 'pas:lacak_detail' transaksi.invoice.pengajuan.pk %}" class="btn btn-outline-secondary">Status Pengajuan</a>
+                        {% endif %}
+                    </div>
                 </form>
-                <div class="alert alert-info small mt-3">
-                    Upload bukti bukan berarti lunas. Status PAID hanya setelah verifikasi petugas.
+                <div class="alert alert-info small mt-3 mb-0">
+                    Transaksi sudah dibuat — langkah berikutnya unggah bukti transfer/pembayaran di atas.
+                    Upload bukti bukan berarti lunas; status PAID hanya setelah verifikasi petugas.
                 </div>
             </div>
         </div>

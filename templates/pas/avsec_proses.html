@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% load rupiah %}
+
+{% block title %}Serah Terima PAS (Avsec){% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                    <div>
+                        <h5 class="mb-1">{{ pengajuan.nomor_pengajuan }}</h5>
+                        <span class="badge text-bg-secondary">{{ pengajuan.get_status_display }}</span>
+                        {% if pengajuan.tanggal_berlaku_pas %}
+                        <span class="badge text-bg-{% if pengajuan.status_masa_berlaku == 'AKTIF' %}success{% elif pengajuan.status_masa_berlaku == 'KEDALUWARSA' %}danger{% else %}info{% endif %}">
+                            Berlaku {{ pengajuan.tanggal_berlaku_pas|date:"d M Y" }} — {{ pengajuan.status_masa_berlaku }}
+                        </span>
+                        {% endif %}
+                        <span class="badge text-bg-dark">{{ serah.get_status_display }}</span>
+                    </div>
+                    <a href="{% url 'pas:avsec_list' %}" class="btn btn-sm btn-outline-secondary">Kembali</a>
+                </div>
+                <table class="table table-sm mt-3 mb-0">
+                    <tr><th style="width:200px">Pemohon / PIC</th><td>{{ pengajuan.nama_pemohon }} — {{ pengajuan.pic_nama }}</td></tr>
+                    <tr><th>NIK PIC</th><td>{{ pengajuan.pic_nomor_identitas|default:"-" }}</td></tr>
+                    <tr><th>Layanan</th><td>{{ pengajuan.layanan.nama_layanan }} ({{ pengajuan.layanan.get_lokasi_display }})</td></tr>
+                    <tr><th>Pelaksanaan</th><td>{{ pengajuan.tanggal_pelaksanaan|date:"d M Y" }}{% if pengajuan.waktu_kedatangan %} pukul {{ pengajuan.waktu_kedatangan|time:"H:i" }}{% endif %}</td></tr>
+                    {% if pengajuan.tujuan %}<tr><th>Tujuan</th><td>{{ pengajuan.tujuan }}</td></tr>{% endif %}
+                    <tr><th>Total</th><td>Rp {{ pengajuan.total|rupiah }}</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="card-title">1. Fisik PAS Visitor yang Diserahkan</h6>
+                <p class="small text-muted">Nomor PAS diinput AOCH, fisiknya diserahkan oleh petugas Avsec.</p>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead><tr><th>#</th><th>Nama Pendamping</th><th>NIK</th><th>Nomor PAS Visitor</th></tr></thead>
+                        <tbody>
+                            {% for pd in pendamping %}
+                            <tr>
+                                <td>{{ pd.urutan }}</td>
+                                <td>{{ pd.nama }}</td>
+                                <td class="font-monospace">{{ pd.nik }}</td>
+                                <td class="font-monospace">
+                                    {% if pd.nomor_pas %}{{ pd.nomor_pas }}{% else %}<span class="text-danger">Belum diinput AOCH</span>{% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-muted">Tidak ada pendamping.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="card-title">2. Penyerahan &amp; Pengembalian</h6>
+                <p class="small text-muted">
+                    Penyerahan cukup diwakilkan oleh PIC pemohon atau orang yang ditugaskan.
+                    Foto &amp; tanda tangan elektronik dicatat saat menyerahkan.
+                </p>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <div class="border rounded p-2 text-center h-100">
+                            <div class="small text-muted mb-1">Foto Penyerahan</div>
+                            {% if serah.foto_penyerahan %}
+                            <img src="{{ serah.foto_penyerahan.url }}" alt="Foto penyerahan"
+                                 style="max-height:220px; width:100%; object-fit:cover; border-radius:8px;">
+                            {% else %}
+                            <div class="text-muted small py-4">Belum ada foto</div>
+                            {% endif %}
+                            {% if serah.tanggal_penyerahan %}
+                            <div class="small mt-1">Diserahkan {{ serah.tanggal_penyerahan|date:"d M Y H:i" }} WIB</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border rounded p-2 text-center h-100">
+                            <div class="small text-muted mb-1">Tanda Tangan Elektronik</div>
+                            {% if serah.ttd_elektronik %}
+                            <img src="{{ serah.ttd_elektronik.url }}" alt="TTD elektronik"
+                                 style="max-height:220px; width:100%; object-fit:contain; background:#f8f9fa; border-radius:8px;">
+                            {% else %}
+                            <div class="text-muted small py-4">Belum ada tanda tangan</div>
+                            {% endif %}
+                            {% if serah.tanggal_pengembalian %}
+                            <div class="small mt-1 text-danger">Dikembalikan {{ serah.tanggal_pengembalian|date:"d M Y H:i" }} WIB</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <form method="post" id="serah-form" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nama Penerima (PIC / Wakil) <span class="text-danger">*</span></label>
+                            <input type="text" name="penerima_nama" class="form-control"
+                                   value="{{ serah.penerima_nama|default:pengajuan.pic_nama }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">NIK Penerima</label>
+                            <input type="text" name="penerima_nik" class="form-control"
+                                   value="{{ serah.penerima_nik|default:pengajuan.pic_nomor_identitas }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Jabatan</label>
+                            <input type="text" name="penerima_jabatan" class="form-control"
+                                   value="{{ serah.penerima_jabatan|default:pengajuan.pic_jabatan }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Ditugaskan / Wakil (opsional)</label>
+                            <input type="text" name="penerima_delegasi" class="form-control"
+                                   value="{{ serah.penerima_delegasi }}"
+                                   placeholder="Diisi bila diwakilkan orang lain">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Foto Orang yang Menerima <span class="text-danger">*</span></label>
+                            <input type="file" name="foto" class="form-control" accept="image/*">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Tanda Tangan Elektronik <span class="text-danger">*</span></label>
+                            <canvas id="ttd" width="480" height="150"
+                                    style="width:100%; max-width:480px; border:1px dashed #adb5bd; border-radius:8px; background:#fff; touch-action:none;"></canvas>
+                            <div class="mt-1">
+                                <button type="button" id="clear-ttd" class="btn btn-sm btn-outline-secondary">Hapus TTD</button>
+                                <span class="small text-muted ms-1">Tanda tangan dengan mouse / jari.</span>
+                            </div>
+                            <input type="hidden" name="ttd_data" id="ttd_data">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Catatan</label>
+                            <textarea name="catatan" class="form-control" rows="2">{{ serah.catatan }}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 d-flex gap-2 flex-wrap align-items-center">
+                        {% if serah.status == 'BELUM' %}
+                        <button type="submit" name="aksi" value="serahkan" class="btn btn-primary">Catat Penyerahan</button>
+                        {% elif serah.status == 'DITERIMA' %}
+                        <button type="submit" name="aksi" value="kembalikan" class="btn btn-warning">Catat Pengembalian</button>
+                        <button type="submit" name="aksi" value="serahkan" class="btn btn-outline-primary">Perbarui Penyerahan</button>
+                        {% else %}
+                        <span class="alert alert-success py-2 mb-0">PAS sudah dikembalikan pemohon.</span>
+                        {% endif %}
+                        {% if serah.status == 'DIKEMBALIKAN' and pengajuan.status != 'SELESAI' %}
+                        <button type="submit" name="aksi" value="selesai" class="btn btn-success">Tandai Selesai</button>
+                        {% endif %}
+                        {% if serah.petugas %}
+                        <span class="small text-muted ms-auto">Dicatat oleh {{ serah.petugas.nama_lengkap|default:serah.petugas.username }}</span>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const canvas = document.getElementById('ttd');
+    const ctx = canvas.getContext('2d');
+    const hidden = document.getElementById('ttd_data');
+    let drawing = false;
+
+    function pos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const src = e.touches ? e.touches[0] : e;
+        return {
+            x: (src.clientX - rect.left) * (canvas.width / rect.width),
+            y: (src.clientY - rect.top) * (canvas.height / rect.height)
+        };
+    }
+    function start(e) { drawing = true; ctx.beginPath(); const p = pos(e); ctx.moveTo(p.x, p.y); e.preventDefault(); }
+    function move(e) {
+        if (!drawing) return;
+        const p = pos(e);
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#111';
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+        e.preventDefault();
+    }
+    function end() {
+        if (!drawing) return;
+        drawing = false;
+        hidden.value = canvas.toDataURL('image/png');
+    }
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', end);
+    canvas.addEventListener('touchstart', start, { passive: false });
+    canvas.addEventListener('touchmove', move, { passive: false });
+    canvas.addEventListener('touchend', end);
+
+    document.getElementById('clear-ttd').addEventListener('click', function () {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        hidden.value = '';
+    });
+
+    document.getElementById('serah-form').addEventListener('submit', function (e) {
+        const aksi = e.submitter ? e.submitter.value : '';
+        if (aksi === 'serahkan') {
+            if (!hidden.value) {
+                alert('Tanda tangan elektronik wajib dibuat terlebih dahulu.');
+                e.preventDefault();
+                return;
+            }
+            const foto = document.querySelector('input[name="foto"]');
+            if (foto && !foto.files.length) {
+                alert('Foto penyerahan wajib diunggah.');
+                e.preventDefault();
+            }
+        } else if (hidden.value === '') {
+            hidden.value = canvas.toDataURL('image/png');
+        }
+    });
+})();
+</script>
+{% endblock %}

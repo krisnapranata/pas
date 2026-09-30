@@ -65,17 +65,44 @@
             </a>
         </div>
 
-        <div class="landing-track">
-            <div class="landing-track-head">
-                <strong>Lacak Pengajuan</strong>
-                <span class="text-muted small">Masukkan nomor pengajuan dan kontak yang Anda daftarkan.</span>
+        <div class="landing-tracks">
+            <div class="landing-track">
+                <div class="landing-track-head">
+                    <strong>Verifikasi PAS Visitor</strong>
+                    <span class="text-muted small">Untuk petugas: masukkan nomor request atau nomor PAS visitor untuk melihat status Aktif / Kedaluwarsa.</span>
+                </div>
+                <form method="post" action="{% url 'pas:verifikasi_pas' %}" class="landing-track-form">
+                    {% csrf_token %}
+                    <input type="text" name="nomor" class="form-control" placeholder="Nomor request / nomor PAS visitor" required>
+                    <button type="submit" class="btn btn-outline-primary">Verifikasi</button>
+                </form>
             </div>
-            <form method="post" action="{% url 'pas:lacak_pengajuan' %}" class="landing-track-form">
-                {% csrf_token %}
-                <input type="text" name="nomor_pengajuan" class="form-control" placeholder="Nomor pengajuan (cth: REQ-20260924-0001)" required>
-                <input type="text" name="kontak" class="form-control" placeholder="No. HP atau email" required>
-                <button type="submit" class="btn btn-primary">Lacak</button>
-            </form>
+
+            <div class="landing-track">
+                <div class="landing-track-head">
+                    <strong>Upload Bukti Bayar</strong>
+                    <span class="text-muted small">Sudah pernah mengajukan? Buka lagi halaman pembayaran atau unggah bukti bayar Anda.</span>
+                </div>
+                <form method="post" action="{% url 'pembayaran:cari_bukti' %}" class="landing-track-form">
+                    {% csrf_token %}
+                    <input type="text" name="nomor_pengajuan" class="form-control" placeholder="Nomor pengajuan (cth: REQ-20260924-0001)" required>
+                    <input type="text" name="kontak" class="form-control" placeholder="No. HP atau email" required>
+                    <button type="submit" class="btn btn-success">Lanjut Bayar</button>
+                </form>
+            </div>
+
+            <div class="landing-track">
+                <div class="landing-track-head">
+                    <strong>Lacak Pengajuan</strong>
+                    <span class="text-muted small">Masukkan nomor pengajuan dan kontak yang Anda daftarkan.</span>
+                </div>
+                <form method="post" action="{% url 'pas:lacak_pengajuan' %}" class="landing-track-form">
+                    {% csrf_token %}
+                    <input type="text" name="nomor_pengajuan" class="form-control" placeholder="Nomor pengajuan (cth: REQ-20260924-0001)" required>
+                    <input type="text" name="kontak" class="form-control" placeholder="No. HP atau email" required>
+                    <button type="submit" class="btn btn-primary">Lacak</button>
+                </form>
+            </div>
         </div>
     </div>
 </div>

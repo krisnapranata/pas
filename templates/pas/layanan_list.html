@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% load rupiah %}
+
+{% block title %}Master Layanan{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+        <h4 class="mb-1">Kelola Layanan</h4>
+        <p class="text-muted mb-0">Buat, ubah, dan hapus layanan beserta harganya.</p>
+    </div>
+    <a href="{% url 'pas:layanan_buat' %}" class="btn btn-primary">+ Tambah Layanan</a>
+</div>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <h6 class="mb-2">Departure</h6>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead><tr><th>Kode</th><th>Nama Layanan</th><th>Kapasitas</th><th>Jenis Tarif</th><th>Harga</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                    {% for l in departure %}
+                    <tr>
+                        <td>{{ l.kode_layanan }}</td>
+                        <td>{{ l.nama_layanan }}{% if l.deskripsi %}<div class="small text-muted">{{ l.deskripsi }}</div>{% endif %}</td>
+                        <td>
+                            {% if l.maksimal_pendamping %}Maks. {{ l.maksimal_pendamping }} orang{% else %}Tanpa batas{% endif %}
+                        </td>
+                        <td>{{ l.get_jenis_tarif_display }}</td>
+                        <td class="fw-semibold">Rp {{ l.harga|rupiah }}</td>
+                        <td>
+                            {% if l.aktif %}<span class="badge text-bg-success">Aktif</span>
+                            {% else %}<span class="badge text-bg-secondary">Nonaktif</span>{% endif %}
+                        </td>
+                        <td class="text-nowrap">
+                            <a href="{% url 'pas:layanan_edit' l.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                            <form method="post" action="{% url 'pas:layanan_hapus' l.pk %}" class="d-inline"
+                                  onsubmit="return confirm('Hapus layanan {{ l.nama_layanan }}?');">
+                                {% csrf_token %}
+                                <button class="btn btn-sm btn-outline-danger">Hapus</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center text-muted py-3">Belum ada layanan Departure.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h6 class="mb-2">Arrival</h6>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead><tr><th>Kode</th><th>Nama Layanan</th><th>Kapasitas</th><th>Jenis Tarif</th><th>Harga</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                    {% for l in arrival %}
+                    <tr>
+                        <td>{{ l.kode_layanan }}</td>
+                        <td>{{ l.nama_layanan }}{% if l.deskripsi %}<div class="small text-muted">{{ l.deskripsi }}</div>{% endif %}</td>
+                        <td>
+                            {% if l.maksimal_pendamping %}Maks. {{ l.maksimal_pendamping }} orang{% else %}Tanpa batas{% endif %}
+                        </td>
+                        <td>{{ l.get_jenis_tarif_display }}</td>
+                        <td class="fw-semibold">Rp {{ l.harga|rupiah }}</td>
+                        <td>
+                            {% if l.aktif %}<span class="badge text-bg-success">Aktif</span>
+                            {% else %}<span class="badge text-bg-secondary">Nonaktif</span>{% endif %}
+                        </td>
+                        <td class="text-nowrap">
+                            <a href="{% url 'pas:layanan_edit' l.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                            <form method="post" action="{% url 'pas:layanan_hapus' l.pk %}" class="d-inline"
+                                  onsubmit="return confirm('Hapus layanan {{ l.nama_layanan }}?');">
+                                {% csrf_token %}
+                                <button class="btn btn-sm btn-outline-danger">Hapus</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center text-muted py-3">Belum ada layanan Arrival.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

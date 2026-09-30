@@ -535,30 +535,38 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--bs-primary-bg-subtle);
   color: var(--bs-primary-text-emphasis);
 }
+.landing-tracks {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  text-align: left;
+}
 .landing-track {
-  max-width: 720px;
-  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
   padding: 20px 22px;
   background: rgba(255, 255, 255, 0.97);
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
-  text-align: left;
 }
 .landing-track-head {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 10px;
-  margin-bottom: 12px;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 14px;
 }
 .landing-track-form {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  margin-top: auto;
 }
-.landing-track-form .form-control { flex: 1 1 220px; }
-.landing-track-form .btn { flex: 0 0 auto; }
+.landing-track-form .form-control { flex: 1 1 100%; }
+.landing-track-form .btn { flex: 1 1 auto; }
 
+@media (min-width: 901px) {
+  .landing-tracks { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 @media (max-width: 900px) {
   .landing-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

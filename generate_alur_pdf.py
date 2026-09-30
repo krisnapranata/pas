@@ -76,6 +76,7 @@ flow = [
     ["DISETUJUI_KOMERSIL", "Dokumen dinyatakan lengkap; diteruskan ke Operasi"],
     ["MENUNGGU_OPERASI", "Operasi meninjau & memutuskan setuju/tolak"],
     ["MENUNGGU_PEMBAYARAN", "Operasi setuju; invoice dibuat, pemohon membayar"],
+    ["BUKTI_TERUNGGAH", "Pemohon mengunggah bukti bayar; menunggu verifikasi Komersil"],
     ["DIBAYAR", "Pembayaran diverifikasi lunas"],
     ["PAS_TERBIT", "PAS diterbitkan oleh Operasi (dapat diambil pemohon)"],
 ]
@@ -228,7 +229,7 @@ story.append(li("Operasi menandai <b>DILAKSANAKAN</b> saat layanan diberikan, la
 story.append(li("Pemohon dapat melihat riwayat status & notifikasi di dashboard."))
 
 story.append(Spacer(1, 10))
-story.append(Paragraph("Alur status inti: DRAFT &rarr; DIAJUKAN &rarr; VERIFIKASI_KOMERSIL &rarr; DISETUJUI_KOMERSIL &rarr; MENUNGGU_OPERASI &rarr; MENUNGGU_PEMBAYARAN &rarr; DIBAYAR &rarr; PAS_TERBIT.", note))
+story.append(Paragraph("Alur status inti: DRAFT &rarr; DIAJUKAN &rarr; VERIFIKASI_KOMERSIL &rarr; DISETUJUI_KOMERSIL &rarr; MENUNGGU_OPERASI &rarr; MENUNGGU_PEMBAYARAN &rarr; BUKTI_TERUNGGAH &rarr; DIBAYAR &rarr; PAS_TERBIT.", note))
 
 doc.build(story)
 print("PDF berhasil dibuat:", OUTPUT)

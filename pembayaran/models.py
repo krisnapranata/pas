@@ -98,6 +98,25 @@ class Invoice(models.Model):
         return self.total
 
     @property
+    def transaksi_menunggu_bukti(self):
+        """Transaksi aktif yang belum ada bukti bayar -> pemohon wajib upload.
+
+        Dipakai agar pemohon yang menutup tab setelah "Buat Transaksi" selalu
+        diarahkan kembali ke menu Upload Bukti Pembayaran.
+        """
+        return (
+            self.transaksi.filter(
+                status__in=[
+                    PaymentTransaction.Status.CREATED,
+                    PaymentTransaction.Status.PENDING,
+                ],
+                manual__isnull=True,
+            )
+            .order_by("-created_at")
+            .first()
+        )
+
+    @property
     def transaksi_menunggu_verifikasi(self):
         """Transaksi PENDING yang sudah ada bukti bayar manual (menunggu verifikasi petugas)."""
         return self.transaksi.filter(

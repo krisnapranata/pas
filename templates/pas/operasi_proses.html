@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load rupiah %}
 
-{% block title %}Proses Persetujuan Operasi{% endblock %}
+{% block title %}Proses Operasi{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -10,30 +10,62 @@
             <div class="card-body">
                 <h5>{{ pengajuan.nomor_pengajuan }}</h5>
                 <span class="badge text-bg-secondary">{{ pengajuan.get_status_display }}</span>
+                {% if pengajuan.tanggal_berlaku_pas %}
+                <span class="badge text-bg-{% if pengajuan.status_masa_berlaku == 'AKTIF' %}success{% elif pengajuan.status_masa_berlaku == 'KEDALUWARSA' %}danger{% else %}info{% endif %}">
+                    Berlaku {{ pengajuan.tanggal_berlaku_pas|date:"d M Y" }} — {{ pengajuan.status_masa_berlaku }}
+                </span>
+                {% endif %}
                 <table class="table table-sm mt-2">
-                    <tr><th style="width:200px">Pemohon</th><td>{{ pengajuan.nama_pemohon }}</td></tr>
-                    <tr><th>Instansi</th><td>{{ pengajuan.instansi_pemohon|default:"-" }}</td></tr>
+                    <tr><th style="width:200px">Pemohon / PIC</th><td>{{ pengajuan.nama_pemohon }}</td></tr>
                     <tr><th>No. HP</th><td>{{ pengajuan.kontak_pemohon|default:"-" }}</td></tr>
-                    <tr><th>Layanan</th><td>{{ pengajuan.layanan.nama_layanan }}</td></tr>
+                    <tr><th>Layanan</th><td>{{ pengajuan.layanan.nama_layanan }} ({{ pengajuan.layanan.get_lokasi_display }})</td></tr>
                     <tr><th>Tanggal</th><td>{{ pengajuan.tanggal_pelaksanaan|date:"d M Y" }}</td></tr>
                     <tr><th>Jumlah Pendamping</th><td>{{ pengajuan.jumlah_pendamping }}</td></tr>
-                    <tr><th>Tujuan/Instansi</th><td>{{ pengajuan.tujuan|default:"-" }}</td></tr>
                     <tr class="fw-bold"><th>TOTAL</th><td>Rp {{ pengajuan.total|rupiah }}</td></tr>
                 </table>
+                {% if invoice %}
+                <div class="small text-muted">Invoice {{ invoice.nomor_invoice }} —
+                    status <strong>{{ invoice.get_status_display }}</strong></div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-3 {% if hitam %}border-danger{% endif %}">
+            <div class="card-body">
+                <h6 class="card-title">Pengecekan Ulang Daftar Hitam (NIK &amp; Nama)</h6>
+                <p class="small text-muted">Dilakukan ulang sebelum PAS diterbitkan sesuai notifikasi Komersil.</p>
+                {% if hitam %}
+                <div class="alert alert-danger mb-0">
+                    <strong>Identitas berikut masuk daftar hitam — PAS tidak boleh diterbitkan:</strong>
+                    <ul class="mb-0 ps-3">
+                        {% for h in hitam %}
+                        <li>
+                            NIK {{ h.nik|default:"-" }} — {{ h.nama }}
+                            {% if h.alasan %}<div class="small">{{ h.alasan }}</div>{% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% else %}
+                <div class="alert alert-success mb-0">
+                    Semua NIK pendamping &amp; NIK PIC <strong>lolos</strong> daftar hitam.
+                </div>
+                {% endif %}
             </div>
         </div>
 
         <div class="card shadow-sm mb-3">
             <div class="card-body">
-                <h6 class="card-title">Dokumen Identitas Pendamping (Pengecekan Kedua)</h6>
+                <h6 class="card-title">Dokumen Identitas Pendamping</h6>
                 <div class="row g-3">
                     {% for pd in pendamping %}
                     <div class="col-6 col-md-4 col-lg-3">
                         <div class="border rounded p-2 text-center h-100">
-                            <div class="fw-semibold mb-2">{{ pd.urutan }}. {{ pd.nama }}</div>
+                            <div class="fw-semibold mb-1">{{ pd.urutan }}. {{ pd.nama }}</div>
+                            <div class="small text-muted mb-2">NIK {{ pd.nik }}</div>
                             {% if pd.is_image %}
                             <a href="{{ pd.file.url }}" target="_blank" class="d-block">
-                                <img src="{{ pd.file.url }}" alt="ID Card {{ pd.nama }}" style="width:100%; height:220px; object-fit:cover; border-radius:8px; background:#f4f8fc;">
+                                <img src="{{ pd.file.url }}" alt="ID Card {{ pd.nama }}" style="width:100%; height:200px; object-fit:cover; border-radius:8px; background:#f4f8fc;">
                             </a>
                             {% else %}
                             <a href="{{ pd.file.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">Lihat Dokumen</a>
@@ -48,52 +80,56 @@
             </div>
         </div>
 
-        {% if pengajuan.status == 'MENUNGGU_OPERASI' %}
+        {% if pengajuan.status == 'MENUNGGU_OPERASI' or pengajuan.status == 'DIBAYAR' or pengajuan.status == 'ACKNOWLEDGED_AOCH' %}
         <div class="card shadow-sm">
             <div class="card-body">
+                <h6>Penerbitan PAS</h6>
+                {% if pengajuan.status == 'DIBAYAR' %}
+                <div class="alert alert-info py-2 small mb-2">
+                    Pembayaran sudah tervalidasi tetapi belum diteruskan Komersil.
+                    Anda boleh langsung menerbitkan PAS setelah lolos pengecekan ulang daftar hitam.
+                </div>
+                {% else %}
+                <p class="text-muted small mb-3">
+                    Pembayaran sudah tervalidasi. Setelah lolos pengecekan ulang daftar hitam,
+                    PAS diterbitkan berlaku <strong>satu hari</strong> dan diteruskan ke AOCH
+                    untuk penyerahan.
+                </p>
+                {% endif %}
+                <form method="post" action="{% url 'pas:terbitkan_pas' pengajuan.pk %}">
+                    {% csrf_token %}
+                    {% if hitam %}
+                    <button type="submit" class="btn btn-primary" disabled>Terbitkan PAS</button>
+                    <span class="text-danger small ms-2">Tidak dapat diterbitkan — ada identitas dalam daftar hitam.</span>
+                    {% else %}
+                    <button type="submit" class="btn btn-primary">Terbitkan PAS</button>
+                    {% endif %}
+                </form>
+                <hr>
                 <form method="post">
                     {% csrf_token %}
                     <div class="mb-3">
                         <label class="form-label">Alasan (wajib jika menolak)</label>
                         <textarea name="alasan" class="form-control" rows="2"></textarea>
                     </div>
-                    <button type="submit" name="aksi" value="SETUJUI" class="btn btn-success">Setujui</button>
-                    <button type="submit" name="aksi" value="TOLAK" class="btn btn-danger">Tolak</button>
+                    <button type="submit" name="aksi" value="TOLAK" class="btn btn-outline-danger">Tolak Pengajuan</button>
                     <a href="{% url 'pas:operasi_list' %}" class="btn btn-outline-secondary">Kembali</a>
                 </form>
             </div>
         </div>
-        {% elif pengajuan.status == 'DIBAYAR' or pengajuan.status == 'ACKNOWLEDGED_AOCH' %}
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h6>Penerbitan PAS</h6>
-                <p class="text-muted small mb-3">Pembayaran sudah diverifikasi lunas. Terbitkan PAS agar pemohon dapat mengambil kartu di Operasi.</p>
-                <form method="post" action="{% url 'pas:terbitkan_pas' pengajuan.pk %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-primary">Terbitkan PAS</button>
-                </form>
-            </div>
+        {% elif pengajuan.status == 'PAS_TERBIT' or pengajuan.status == 'DILAKSANAKAN' %}
+        <div class="alert alert-success">
+            PAS telah diterbitkan dan berlaku pada <strong>{{ pengajuan.tanggal_berlaku_pas|date:"d M Y" }}</strong>
+            (satu hari). AOCH menginput nomor PAS visitor, petugas Avsec mencatat
+            penyerahan &amp; pengembalian fisiknya.
+            <a href="{% url 'pas:aoch_proses' pengajuan.pk %}">Halaman AOCH</a>
+            ·
+            <a href="{% url 'pas:avsec_serah_terima' pengajuan.pk %}">Halaman Serah Terima Avsec</a>
         </div>
-        {% elif pengajuan.status == 'PAS_TERBIT' %}
-        <div class="alert alert-success">PAS telah diterbitkan. Pemohon dapat mengambil kartu PAS di Operasi.</div>
-        {% elif pengajuan.status == 'SIAP_DILAKSANAKAN' %}
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <form method="post" action="{% url 'pas:tandai_pelaksanaan' pengajuan.pk %}">
-                    {% csrf_token %}
-                    <button type="submit" name="aksi" value="DILAKSANAKAN" class="btn btn-primary">Tandai Dilaksanakan</button>
-                </form>
-            </div>
-        </div>
-        {% elif pengajuan.status == 'DILAKSANAKAN' %}
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <form method="post" action="{% url 'pas:tandai_pelaksanaan' pengajuan.pk %}">
-                    {% csrf_token %}
-                    <button type="submit" name="aksi" value="SELESAI" class="btn btn-success">Tandai Selesai</button>
-                </form>
-            </div>
-        </div>
+        {% elif pengajuan.status == 'SELESAI' %}
+        <div class="alert alert-success">Pengajuan selesai — PAS telah dikembalikan pemohon.</div>
+        {% elif pengajuan.status == 'DITOLAK_OPERASI' %}
+        <div class="alert alert-danger">Pengajuan ditolak: {{ catatan_terakhir|default:pengajuan.catatan }}</div>
         {% endif %}
     </div>
 </div>

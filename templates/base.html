@@ -22,7 +22,9 @@
             </a>
             {% if not user.is_authenticated %}
             <div class="d-flex align-items-center gap-2">
+                <a class="btn btn-sm btn-outline-secondary" href="{% url 'pas:verifikasi_pas' %}">Verifikasi PAS</a>
                 <a class="btn btn-sm btn-outline-secondary" href="{% url 'pas:lacak_pengajuan' %}">Lacak Pengajuan</a>
+                <a class="btn btn-sm btn-outline-primary" href="{% url 'pembayaran:cari_bukti' %}">Upload Bukti</a>
                 <a class="btn btn-sm btn-primary" href="{% url 'accounts:login' %}">Masuk Petugas</a>
             </div>
             {% endif %}
@@ -39,17 +41,29 @@
                     <li class="nav-item"><a class="nav-link" href="{% url 'pas:buat_pengajuan' %}">Buat Pengajuan</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'pembayaran:invoice_saya' %}">Pembayaran</a></li>
                     {% elif user.role == 'KOMERSIL' or user.is_staff %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:layanan_list' %}">Layanan</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'pas:verifikasi_list' %}">Verifikasi</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'pas:daftar_pengajuan' %}">Semua Pengajuan</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'pembayaran:dashboard_pembayaran' %}">Pembayaran</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pembayaran:jenis_list' %}">Jenis Pembayaran</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'accounts:user_tim' %}">Kelola User</a></li>
                     {% endif %}
                     {% if user.role == 'OPERASI' or user.is_staff %}
                     <li class="nav-item"><a class="nav-link" href="{% url 'pas:operasi_list' %}">Operasi</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:hitam_list' %}">Daftar Hitam</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'accounts:user_tim' %}">Kelola User</a></li>
                     {% endif %}
                     {% if user.role == 'AOCH' or user.is_staff %}
                     <li class="nav-item"><a class="nav-link" href="{% url 'pas:aoch_list' %}">AOCH</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'accounts:user_tim' %}">Kelola User</a></li>
                     {% endif %}
-                    {% if user.is_staff or user.role == 'ADMINISTRATOR' or user.role == 'KOMERSIL' or user.role == 'OPERASI' or user.role == 'AOCH' %}
+                    {% if user.role == 'AVSEC' or user.is_staff %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:avsec_list' %}">Serah Terima</a></li>
+                    {% endif %}
+                    {% if user.is_staff or user.role == 'KOMERSIL' or user.role == 'OPERASI' or user.role == 'AOCH' or user.role == 'AVSEC' or user.role == 'ADMINISTRATOR' %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:verifikasi_pas' %}">Verifikasi PAS</a></li>
+                    {% endif %}
+                    {% if user.is_staff or user.role == 'ADMINISTRATOR' or user.role == 'KOMERSIL' or user.role == 'OPERASI' or user.role == 'AOCH' or user.role == 'AVSEC' %}
                     <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:statistik' %}">Statistik</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:laporan' %}">Laporan</a></li>
                     {% endif %}

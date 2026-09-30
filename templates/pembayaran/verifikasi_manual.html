@@ -16,7 +16,23 @@
                 <h5>Verifikasi Pembayaran Manual</h5>
                 <table class="table table-sm">
                     <tr><th>Transaksi</th><td>{{ transaksi.merchant_reference }}</td></tr>
-                    <tr><th>Invoice</th><td>{{ transaksi.invoice.nomor_invoice }} ({{ transaksi.invoice.pengajuan.nama_pemohon }})</td></tr>
+                    <tr><th>Pengajuan</th>
+                        <td>
+                            <a href="{% url 'pas:detail_pengajuan' transaksi.invoice.pengajuan.pk %}">{{ transaksi.invoice.pengajuan.nomor_pengajuan }}</a>
+                            <div class="small text-muted">{{ transaksi.invoice.pengajuan.layanan.nama_layanan }} · pelaksanaan {{ transaksi.invoice.pengajuan.tanggal_pelaksanaan|date:"d M Y" }}</div>
+                        </td>
+                    </tr>
+                    <tr><th>Pemohon</th>
+                        <td>
+                            {{ transaksi.invoice.pengajuan.nama_pemohon }}
+                            {% if transaksi.invoice.pengajuan.instansi_pemohon %}— {{ transaksi.invoice.pengajuan.instansi_pemohon }}{% endif %}
+                            <div class="small text-muted">
+                                {% if transaksi.invoice.pengajuan.pemohon_no_hp %}HP: {{ transaksi.invoice.pengajuan.pemohon_no_hp }} · {% endif %}
+                                {% if transaksi.invoice.pengajuan.pemohon_email %}{{ transaksi.invoice.pengajuan.pemohon_email }}{% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    <tr><th>Invoice</th><td>{{ transaksi.invoice.nomor_invoice }} ({{ transaksi.invoice.get_status_display }})</td></tr>
                     <tr><th>Nominal</th><td>Rp {{ transaksi.amount|rupiah }}</td></tr>
                     <tr><th>Status</th><td>{{ transaksi.get_status_display }}</td></tr>
                 </table>

@@ -1,60 +1,46 @@
 {% extends "base.html" %}
 {% load rupiah %}
 
-{% block title %}Dashboard Komersil{% endblock %}
+{% block title %}Commercial Dashboard{% endblock %}
 
 {% block content %}
-<h4 class="mb-1">Dashboard Komersil</h4>
-<p class="text-muted">Verifikasi administrasi, kelengkapan data, &amp; pembayaran.</p>
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+    <div>
+        <h4 class="mb-1">Commercial Dashboard</h4>
+        <p class="text-muted mb-0">Payment validation, service catalogue &amp; forwarding to Operations.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{% url 'pas:layanan_list' %}" class="btn btn-outline-primary btn-sm">Manage Services</a>
+        <a href="{% url 'pembayaran:jenis_list' %}" class="btn btn-outline-primary btn-sm">Payment Methods</a>
+        <a href="{% url 'accounts:user_tim' %}" class="btn btn-outline-primary btn-sm">Manage Users</a>
+        <a href="{% url 'pas:verifikasi_pas' %}" class="btn btn-outline-secondary btn-sm">Verify PAS</a>
+    </div>
+</div>
 
 <div class="row g-3">
     <div class="col-6 col-md-3">
-        <div class="card card-stat text-bg-dark"><div class="card-body"><div class="small">Pengajuan Baru</div><div class="display-6">{{ pengajuan_baru }}</div></div></div>
+        <div class="card card-stat text-bg-dark"><div class="card-body"><div class="small">New Applications</div><div class="display-6">{{ pengajuan_baru }}</div></div></div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card card-stat text-bg-warning"><div class="card-body"><div class="small">Perlu Revisi</div><div class="display-6">{{ perlu_revisi }}</div></div></div>
+        <div class="card card-stat text-bg-info"><div class="card-body"><div class="small">Payment Proof Pending</div><div class="display-6">{{ menunggu_verifikasi_bayar }}</div></div></div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card card-stat text-bg-success"><div class="card-body"><div class="small">Disetujui Hari Ini</div><div class="display-6">{{ disetujui_hari_ini }}</div></div></div>
+        <div class="card card-stat text-bg-success"><div class="card-body"><div class="small">Paid — Ready to Forward</div><div class="display-6">{{ sudah_dibayar }}</div></div></div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card card-stat text-bg-info"><div class="card-body"><div class="small">Menunggu Verifikasi Bayar</div><div class="display-6">{{ menunggu_verifikasi_bayar }}</div></div></div>
+        <div class="card card-stat text-bg-warning"><div class="card-body"><div class="small">Forwarded to Operations</div><div class="display-6">{{ menunggu_operasi }}</div></div></div>
     </div>
 </div>
 
 <div class="card shadow-sm mt-3">
     <div class="card-body">
-        <h6 class="mb-2">Antrian Verifikasi Dokumen</h6>
-        <div class="table-responsive">
-            <table class="table table-sm">
-                <thead><tr><th>Nomor</th><th>Pemohon</th><th>Layanan</th><th>Tgl. Permohonan</th><th>Pelaksanaan</th><th>Pendamping</th><th>Total</th><th></th></tr></thead>
-                <tbody>
-                    {% for p in pengajuan %}
-                    <tr>
-                        <td>{{ p.nomor_pengajuan }}</td>
-                        <td>{{ p.nama_pemohon }}</td>
-                        <td>{{ p.layanan.nama_layanan }}</td>
-                        <td>{{ p.created_at|date:"d-m-Y" }}<div class="small text-muted">{{ p.created_at|time:"H:i" }} WIB</div></td>
-                        <td>{{ p.tanggal_pelaksanaan|date:"d-m-Y" }}</td>
-                        <td>{{ p.jumlah_pendamping }}</td>
-                        <td>Rp {{ p.total|rupiah }}</td>
-                        <td><a href="{% url 'pas:verifikasi_dokumen' p.pk %}" class="btn btn-sm btn-primary">Verifikasi</a></td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="8" class="text-center text-muted py-3">Tidak ada antrian verifikasi dokumen.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="mb-0">Payment Proof Verification</h6>
+            <a href="{% url 'pembayaran:dashboard_pembayaran' %}" class="btn btn-sm btn-outline-primary">All Payments</a>
         </div>
-    </div>
-</div>
-
-<div class="card shadow-sm mt-3">
-    <div class="card-body">
-        <h6 class="mb-2">Antrian Verifikasi Bukti Pembayaran</h6>
         <div class="table-responsive">
             <table class="table table-sm">
-                <thead><tr><th>Invoice</th><th>Pemohon</th><th>Metode</th><th>Nominal</th><th>Status</th><th></th></tr></thead>
+                <thead><tr><th>Invoice</th><th>Applicant</th><th>Method</th><th>Amount</th><th>Status</th><th></th></tr></thead>
                 <tbody>
                     {% for t in bukti_bayar %}
                     <tr>
@@ -63,14 +49,52 @@
                         <td>{{ t.payment_method.name }}</td>
                         <td>Rp {{ t.amount|rupiah }}</td>
                         <td><span class="badge text-bg-secondary">{{ t.get_status_display }}</span></td>
-                        <td><a href="{% url 'pembayaran:verifikasi_manual' t.pk %}" class="btn btn-sm btn-primary">Verifikasi</a></td>
+                        <td><a href="{% url 'pembayaran:verifikasi_manual' t.pk %}" class="btn btn-sm btn-primary">Validate</a></td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="6" class="text-center text-muted py-3">Tidak ada bukti pembayaran menunggu verifikasi.</td></tr>
+                    <tr><td colspan="6" class="text-center text-muted py-3">No payment proofs awaiting validation.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
 </div>
+
+<div class="card shadow-sm mt-3">
+    <div class="card-body">
+        <h6 class="mb-2">Forward to Operations</h6>
+        <p class="text-muted small">Applications with validated payment. Confirm the proof, then release them to Operations for PAS issuance.</p>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead><tr><th>Reference</th><th>Applicant</th><th>Service</th><th>Execution Date</th><th>Companions</th><th>Total</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                    {% for p in pengajuan %}
+                    <tr>
+                        <td>{{ p.nomor_pengajuan }}</td>
+                        <td>{{ p.nama_pemohon }}</td>
+                        <td>{{ p.layanan.nama_layanan }}<div class="small text-muted">{{ p.layanan.get_lokasi_display }}</div></td>
+                        <td>{{ p.tanggal_pelaksanaan|date:"d-m-Y" }}</td>
+                        <td>{{ p.jumlah_pendamping }}</td>
+                        <td>Rp {{ p.total|rupiah }}</td>
+                        <td><span class="badge text-bg-secondary">{{ p.get_status_display }}</span></td>
+                        <td class="text-nowrap">
+                            {% if p.status == 'DIBAYAR' %}
+                            <form method="post" action="{% url 'pas:lanjutkan_operasi' p.pk %}" class="d-inline">
+                                {% csrf_token %}
+                                <button class="btn btn-sm btn-success">Forward</button>
+                            </form>
+                            {% endif %}
+                            <a href="{% url 'pas:detail_pengajuan' p.pk %}" class="btn btn-sm btn-outline-secondary">Detail</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="8" class="text-center text-muted py-3">No applications waiting to be forwarded.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% include "pas/_masa_berlaku.html" %}
 {% endblock %}

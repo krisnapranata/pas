@@ -23,6 +23,17 @@
             </div>
         </div>
 
+        {% if transaksi.status == 'PENDING' and transaksi.manual and transaksi.manual.bukti %}
+        <div class="alert alert-info">
+            Bukti pembayaran sudah diunggah — <strong>menunggu verifikasi petugas Komersil</strong>.
+            Transaksi baru menjadi Lunas setelah petugas memvalidasi bukti.
+        </div>
+        {% elif transaksi.status == 'PENDING' %}
+        <div class="alert alert-warning">
+            Transaksi sudah dibuat, tetapi <strong>bukti pembayaran belum diunggah</strong>.
+        </div>
+        {% endif %}
+
         {% if qr_data_url %}
         <div class="card shadow-sm mb-3">
             <div class="card-body text-center">
@@ -81,10 +92,16 @@
         {% endif %}
 
         <div class="d-flex gap-2">
-            {% if transaksi.payment_method.type == 'MANUAL_TRANSFER' or transaksi.payment_method.type == 'CASH' %}
-            <a href="{% url 'pembayaran:upload_bukti' transaksi.pk %}" class="btn btn-primary">{% if transaksi.manual %}Ganti Bukti{% else %}Upload Bukti Bayar{% endif %}</a>
+            {% if not transaksi.manual %}
+            <a href="{% url 'pembayaran:upload_bukti' transaksi.pk %}" class="btn btn-primary">Upload Bukti Bayar</a>
+            {% else %}
+            <a href="{% url 'pembayaran:upload_bukti' transaksi.pk %}" class="btn btn-outline-primary">Ganti Bukti</a>
             {% endif %}
+            {% if user.is_authenticated %}
             <a href="{% url 'pembayaran:invoice_saya' %}" class="btn btn-outline-secondary">Kembali</a>
+            {% else %}
+            <a href="{% url 'pas:lacak_detail' transaksi.invoice.pengajuan.pk %}" class="btn btn-outline-secondary">Status Pengajuan</a>
+            {% endif %}
         </div>
     </div>
 </div>

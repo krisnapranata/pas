@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}{% if layanan %}Edit Layanan{% else %}Tambah Layanan{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="mb-3">{% if layanan %}Edit Layanan: {{ layanan.nama_layanan }}{% else %}Tambah Layanan Baru{% endif %}</h5>
+                <form method="post">
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Kode Layanan <span class="text-danger">*</span></label>
+                            {{ form.kode_layanan }}
+                            {{ form.kode_layanan.errors }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Nama Layanan <span class="text-danger">*</span></label>
+                            {{ form.nama_layanan }}
+                            {{ form.nama_layanan.errors }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Lokasi <span class="text-danger">*</span></label>
+                            {{ form.lokasi }}
+                            {{ form.lokasi.errors }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Jenis Tarif</label>
+                            {{ form.jenis_tarif }}
+                            {{ form.jenis_tarif.errors }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Deskripsi</label>
+                            {{ form.deskripsi }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Minimal Pendamping</label>
+                            {{ form.minimal_pendamping }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Maksimal Pendamping (0 = tanpa batas)</label>
+                            {{ form.maksimal_pendamping }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Satuan</label>
+                            {{ form.satuan }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Harga (Rp) <span class="text-danger">*</span></label>
+                            {{ form.harga }}
+                            {{ form.harga.errors }}
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <div class="form-check mt-4">
+                                {{ form.aktif }}
+                                <label class="form-check-label ms-1" for="{{ form.aktif.id_for_label }}">Aktif (tampil di formulir pemohon)</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary">Simpan</button>
+                        <a href="{% url 'pas:layanan_list' %}" class="btn btn-outline-secondary">Batal</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

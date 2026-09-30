@@ -22,6 +22,7 @@ class Command(BaseCommand):
             "komersil1": ("KOMERSIL", "demo123", "Dewi", "Komersil"),
             "operasi1": ("OPERASI", "demo123", "Rudi", "Operasi"),
             "aoch1": ("AOCH", "demo123", "Sari", "AOCH"),
+            "avsec1": ("AVSEC", "demo123", "Agus", "Avsec"),
         }
         user_objs = {}
         for uname, (role, pw, first, last) in users.items():
@@ -44,41 +45,71 @@ class Command(BaseCommand):
         layanan_greet = Layanan.objects.get(kode_layanan="GREET")
         layanan_group = Layanan.objects.get(kode_layanan="GREET_GROUP")
 
+        def contoh(layanan, keterangan, **defaults):
+            """Contoh pengajuan — dicocokkan lewat `keterangan` agar seed tidak
+            menduplikasi data saat status sudah berubah oleh pengujian/manual."""
+            ada = Pengajuan.objects.filter(
+                pemohon=pemohon, keterangan=keterangan
+            ).first()
+            if ada:
+                return ada, False
+            obj = Pengajuan.objects.create(
+                pemohon=pemohon, layanan=layanan, keterangan=keterangan, **defaults
+            )
+            return obj, True
+
         # Pengajuan 1: MENUNGGU_PEMBAYARAN (sudah disetujui operasi, invoice aktif)
-        p1, _ = Pengajuan.objects.get_or_create(
-            pemohon=pemohon,
-            layanan=layanan_group,
+        p1, _ = contoh(
+            layanan_group,
+            "Penyambutan tamu VIP",
             status=Pengajuan.Status.MENUNGGU_PEMBAYARAN,
-            defaults={
-                "tanggal_pelaksanaan": timezone.now().date() + timezone.timedelta(days=5),
-                "tujuan": "PT Angkasa Logistik",
-                "jumlah_tamu": 10,
-                "jumlah_pendamping": 8,
-                "keterangan": "Penyambutan tamu VIP",
-                "pic_nama": "Budi Santoso",
-                "pic_jabatan": "Manajer Operasional",
-                "pic_no_hp": "081234567890",
-            },
+            tanggal_pelaksanaan=timezone.localdate() + timezone.timedelta(days=5),
+            tujuan="PT Angkasa Logistik",
+            jumlah_tamu=10,
+            jumlah_pendamping=8,
+            pic_nama="Budi Santoso",
+            pic_jabatan="Manajer Operasional",
+            pic_no_hp="081234567890",
         )
         p1.simpan_snapshot_tarif()
         p1.nomor_pengajuan = p1.nomor_pengajuan or p1._generate_nomor()
         p1.save()
 
-        # Pengajuan 2: DIAJUKAN (menunggu verifikasi komersil)
-        p2, _ = Pengajuan.objects.get_or_create(
-            pemohon=pemohon,
-            layanan=layanan_greet,
-            status=Pengajuan.Status.DIAJUKAN,
-            defaults={
-                "tanggal_pelaksanaan": timezone.now().date() + timezone.timedelta(days=7),
-                "jumlah_tamu": 3,
-                "jumlah_pendamping": 2,
-                "keterangan": "Greet service kedatangan",
-            },
+        # Pengajuan 2: DIBAYAR (menunggu diteruskan Komersil ke Operasi)
+        p2, _ = contoh(
+            layanan_greet,
+            "Greet service kedatangan",
+            status=Pengajuan.Status.DIBAYAR,
+            tanggal_pelaksanaan=timezone.localdate() + timezone.timedelta(days=7),
+            jumlah_tamu=3,
+            jumlah_pendamping=2,
+            pic_nama="Budi Santoso",
+            pic_no_hp="081234567890",
+            pemohon_nama="Budi Santoso",
+            pemohon_no_hp="081234567890",
         )
         p2.simpan_snapshot_tarif()
         p2.nomor_pengajuan = p2.nomor_pengajuan or p2._generate_nomor()
         p2.save()
+
+        # Pengajuan 3: PAS terbit hari ini (untuk panel masa berlaku & AOCH)
+        p3, _ = contoh(
+            layanan_greet,
+            "PAS visitor hari ini",
+            status=Pengajuan.Status.PAS_TERBIT,
+            tanggal_pelaksanaan=timezone.localdate(),
+            jumlah_tamu=2,
+            jumlah_pendamping=2,
+            pic_nama="Budi Santoso",
+            pic_no_hp="081234567890",
+            pemohon_nama="Budi Santoso",
+            pemohon_no_hp="081234567890",
+            tanggal_berlaku_pas=timezone.localdate(),
+        )
+        p3.simpan_snapshot_tarif()
+        p3.nomor_pengajuan = p3.nomor_pengajuan or p3._generate_nomor()
+        p3.tanggal_berlaku_pas = p3.tanggal_berlaku_pas or timezone.localdate()
+        p3.save()
 
         # Invoice untuk p1 (belum dibayar)
         inv, created = Invoice.objects.get_or_create(pengajuan=p1)
@@ -89,6 +120,15 @@ class Command(BaseCommand):
             inv.nomor_invoice = inv._generate_nomor()
             inv.save()
 
+        # Invoice p2 sudah lunas (siap diteruskan ke Operasi)
+        inv2, created2 = Invoice.objects.get_or_create(pengajuan=p2)
+        if created2:
+            inv2.subtotal = p2.total
+            inv2.hitung_total()
+            inv2.status = Invoice.Status.PAID
+            inv2.nomor_invoice = inv2._generate_nomor()
+            inv2.save()
+
         self.stdout.write(self.style.SUCCESS("\n=== DATA DEMO SIAP ==="))
         creds = [
             ("admin (Administrator)", "admin / admin123"),
@@ -96,6 +136,7 @@ class Command(BaseCommand):
             ("komersil1 (Komersil)", "komersil1 / demo123"),
             ("operasi1 (Operasi)", "operasi1 / demo123"),
             ("aoch1 (AOCH)", "aoch1 / demo123"),
+            ("avsec1 (Avsec)", "avsec1 / demo123"),
         ]
         for label, cre in creds:
             self.stdout.write(f"  {label:<28} {cre}")

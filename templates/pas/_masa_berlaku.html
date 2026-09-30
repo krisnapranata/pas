@@ -1,0 +1,79 @@
+{% if masa_berlaku %}
+<div class="card shadow-sm mt-3">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="mb-0">PAS Visitor Notifications</h6>
+            <span class="badge text-bg-light border">Berlaku 1 hari — {{ masa_berlaku.today|date:"d M Y" }}</span>
+        </div>
+        <div class="row g-2 mb-3">
+            <div class="col-4">
+                <div class="border rounded p-2 text-center h-100">
+                    <div class="small text-muted">Sudah Diserahkan</div>
+                    <div class="fs-5 fw-bold text-primary">{{ masa_berlaku.jumlah_diberikan }}</div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="border rounded p-2 text-center h-100">
+                    <div class="small text-muted">Masa Berlaku Berjalan</div>
+                    <div class="fs-5 fw-bold text-success">{{ masa_berlaku.jumlah_aktif }}</div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="border rounded p-2 text-center h-100">
+                    <div class="small text-muted">Masa Berlaku Habis</div>
+                    <div class="fs-5 fw-bold text-danger">{{ masa_berlaku.jumlah_kedaluwarsa }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="small fw-semibold mb-1">Sudah diberikan ke pemohon</div>
+                <ul class="list-unstyled small mb-0">
+                    {% for p, st in masa_berlaku.diberikan %}
+                    <li class="mb-1">
+                        <a href="{% url 'pas:detail_pengajuan' p.pk %}">{{ p.nomor_pengajuan }}</a>
+                        <span class="text-muted">— {{ p.pic_nama|default:p.nama_pemohon }}</span>
+                        {% if st.status == 'DIKEMBALIKAN' %}
+                        <span class="badge text-bg-secondary">Dikembalikan</span>
+                        {% else %}
+                        <span class="badge text-bg-primary">Diterima</span>
+                        {% endif %}
+                    </li>
+                    {% empty %}
+                    <li class="text-muted">Belum ada PAS diserahkan.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="col-md-4">
+                <div class="small fw-semibold mb-1">Masa berlaku berjalan</div>
+                <ul class="list-unstyled small mb-0">
+                    {% for p in masa_berlaku.aktif %}
+                    <li class="mb-1">
+                        <a href="{% url 'pas:detail_pengajuan' p.pk %}">{{ p.nomor_pengajuan }}</a>
+                        <span class="text-muted">— {{ p.layanan.nama_layanan }}</span>
+                        <span class="badge text-bg-success">Aktif</span>
+                    </li>
+                    {% empty %}
+                    <li class="text-muted">Tidak ada PAS aktif hari ini.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="col-md-4">
+                <div class="small fw-semibold mb-1">Masa berlaku habis</div>
+                <ul class="list-unstyled small mb-0">
+                    {% for p in masa_berlaku.kedaluwarsa %}
+                    <li class="mb-1">
+                        <a href="{% url 'pas:detail_pengajuan' p.pk %}">{{ p.nomor_pengajuan }}</a>
+                        <span class="text-muted">— berlaku {{ p.tanggal_berlaku_pas|date:"d M Y" }}</span>
+                        <span class="badge text-bg-danger">Expired</span>
+                    </li>
+                    {% empty %}
+                    <li class="text-muted">Tidak ada PAS kedaluwarsa.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}

@@ -7,8 +7,11 @@ from django.utils.encoding import force_str
 from django.utils.http import url_has_allowed_host_and_scheme, urlsafe_base64_decode
 
 from .email_utils import send_email_confirmation
-from .forms import LoginForm, PemohonRegistrationForm, ProfilForm
+from .forms import LoginForm, PemohonRegistrationForm, ProfilForm, UserTimForm
 from .models import User
+
+# Peran internal yang boleh membuat akun kawan sendiri
+ROLE_TIM = ("KOMERSIL", "OPERASI", "AOCH", "AVSEC")
 
 
 def home(request):
@@ -38,6 +41,9 @@ def login_view(request):
             messages.error(request, "Akun belum aktif. Periksa email Anda untuk konfirmasi pendaftaran.")
             return redirect("accounts:login")
         login(request, user)
+        if user.password_awal:
+            # Password awal hanya ditampilkan sebelum login pertama
+            User.objects.filter(pk=user.pk).update(password_awal="")
         return redirect(next_url or "dashboard:home")
     return render(request, "accounts/login.html", {"form": form, "next": next_url or ""})
 
@@ -104,3 +110,75 @@ def logout_view(request):
         logout(request)
         return redirect("accounts:login")
     return redirect("dashboard:home")
+
+
+def _boleh_kelola_user(user):
+    """Komersil / Operasi / AOCH / Avsec (atau admin) boleh membuat akun tim."""
+    return user.is_authenticated and (
+        user.is_staff or user.role == User.Role.ADMINISTRATOR or user.role in ROLE_TIM
+    )
+
+
+def _role_dibuat(user, request):
+    """Peran untuk akun baru: sesuai peran pembuat; admin boleh memilih."""
+    if user.is_staff or user.role == User.Role.ADMINISTRATOR:
+        return (request.POST.get("role") or request.GET.get("role") or ROLE_TIM[0])
+    return user.role
+
+
+def _daftar_user_tim(user):
+    """Daftar akun yang terlihat oleh pembuat: satu peran, admin melihat semua."""
+    qs = User.objects.all()
+    if user.is_staff or user.role == User.Role.ADMINISTRATOR:
+        return qs.filter(role__in=ROLE_TIM)
+    return qs.filter(role=user.role)
+
+
+@login_required
+def user_tim_list(request):
+    if not _boleh_kelola_user(request.user):
+        messages.error(request, "Anda tidak berhak mengelola akun tim.")
+        return redirect("dashboard:home")
+    pilihan_role = ROLE_TIM if (
+        request.user.is_staff or request.user.role == User.Role.ADMINISTRATOR
+    ) else (request.user.role,)
+    return render(
+        request,
+        "accounts/user_tim_list.html",
+        {
+            "daftar_user": _daftar_user_tim(request.user).order_by("username"),
+            "pilihan_role": pilihan_role,
+            "role_saya": request.user.role,
+        },
+    )
+
+
+@login_required
+def user_tim_buat(request):
+    if not _boleh_kelola_user(request.user):
+        messages.error(request, "Anda tidak berhak membuat akun tim.")
+        return redirect("dashboard:home")
+    role = _role_dibuat(request.user, request)
+    if role not in ROLE_TIM:
+        role = request.user.role if request.user.role in ROLE_TIM else ROLE_TIM[0]
+    form = UserTimForm(request.POST or None, role=role)
+    if request.method == "POST" and form.is_valid():
+        baru = form.save()
+        log_action_akun(request, "BUAT_USER_TIM", baru)
+        messages.success(
+            request,
+            f"Akun {baru.username} ({baru.get_role_display()}) berhasil dibuat. "
+            "Klik tombol Lihat untuk menampilkan username & password.",
+        )
+        return redirect("accounts:user_tim")
+    return render(
+        request,
+        "accounts/user_tim_buat.html",
+        {"form": form, "role": role, "nama_role": User.Role(role).label},
+    )
+
+
+def log_action_akun(request, aksi, user):
+    from audit.models import log_action
+
+    log_action(request, aksi, "User", user.pk, new_value=user.username)

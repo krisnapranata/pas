@@ -8,6 +8,7 @@ class User(AbstractUser):
         KOMERSIL = "KOMERSIL", "Komersil"
         OPERASI = "OPERASI", "Operasi"
         AOCH = "AOCH", "AOCH"
+        AVSEC = "AVSEC", "Avsec"
         PEMOHON = "PEMOHON", "Pemohon"
 
     role = models.CharField(max_length=30, choices=Role.choices, default=Role.PEMOHON)
@@ -18,6 +19,15 @@ class User(AbstractUser):
     alamat = models.TextField(blank=True)
     jabatan = models.CharField(max_length=100, blank=True)
     email_verified = models.BooleanField(default=False)
+    password_awal = models.CharField(
+        "Password awal",
+        max_length=128,
+        blank=True,
+        help_text=(
+            "Password sementara yang bisa dilihat pembuat akun lewat tombol Lihat. "
+            "Dihapus otomatis saat user berhasil login."
+        ),
+    )
 
     @property
     def nama_lengkap(self):

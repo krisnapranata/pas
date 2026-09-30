@@ -85,3 +85,42 @@ class ProfilForm(forms.ModelForm):
             "alamat": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
             "jabatan": forms.TextInput(attrs={"class": "form-control"}),
         }
+
+
+class UserTimForm(forms.ModelForm):
+    """Form petugas (Komersil/Operasi/AOCH) untuk membuat akun kawan sendiri."""
+
+    password = forms.CharField(
+        label="Password",
+        min_length=6,
+        widget=forms.PasswordInput(
+            attrs={"class": "form-control", "autocomplete": "new-password"}
+        ),
+        help_text="Minimal 6 karakter. Password ini bisa dilihat kembali lewat tombol Lihat.",
+    )
+
+    class Meta:
+        model = User
+        fields = ("username", "first_name", "last_name", "jabatan", "phone", "password")
+
+    def __init__(self, *args, role=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.role_dibuat = role or User.Role.PEMOHON
+        for name in ("username", "first_name", "last_name", "jabatan", "phone"):
+            self.fields[name].widget.attrs.setdefault("class", "form-control")
+        self.fields["username"].error_messages = {
+            "required": "Username wajib diisi.",
+            "unique": "Username sudah terpakai. Silakan pilih username lain.",
+            "invalid": "Username hanya boleh huruf, angka, dan @/./+/-/_.",
+        }
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.set_password(self.cleaned_data["password"])
+        user.password_awal = self.cleaned_data["password"]
+        user.role = self.role_dibuat
+        user.is_active = True
+        user.email_verified = True
+        if commit:
+            user.save()
+        return user

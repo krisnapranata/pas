@@ -11,6 +11,27 @@
 {% block content %}
 <h4 class="mb-3">Rekonsiliasi Pembayaran</h4>
 
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body py-3">
+                <div class="text-muted small">Menunggu verifikasi bukti</div>
+                <div class="fs-4 fw-bold {% if menunggu_bukti %}text-warning{% endif %}">{{ menunggu_bukti }}</div>
+                <a href="?status=PENDING" class="small">Tampilkan antrean PENDING</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body py-3">
+                <div class="text-muted small">Belum unggah bukti bayar</div>
+                <div class="fs-4 fw-bold">{{ belum_bukti }}</div>
+                <span class="small text-muted">Pemohon masih proses upload</span>
+            </div>
+        </div>
+    </div>
+</div>
+
 <form method="get" class="mb-3">
     <select name="status" class="form-select d-inline w-auto">
         <option value="ALL" {% if filter_status == 'ALL' %}selected{% endif %}>Semua</option>
@@ -20,30 +41,56 @@
         <option value="EXPIRED" {% if filter_status == 'EXPIRED' %}selected{% endif %}>Expired</option>
     </select>
     <button type="submit" class="btn btn-outline-primary">Filter</button>
+    {% if filter_status != 'ALL' %}<a href="?" class="btn btn-link">Reset</a>{% endif %}
 </form>
 
-<table class="table table-striped bg-white rounded shadow-sm">
+<table class="table table-striped bg-white rounded shadow-sm align-middle">
     <thead>
-        <tr><th>Invoice</th><th>Metode</th><th>Nominal</th><th>Status</th><th>Aksi</th></tr>
+        <tr>
+            <th>Pengajuan / Pemohon</th>
+            <th>Invoice</th>
+            <th>Metode</th>
+            <th>Nominal</th>
+            <th>Status &amp; Bukti</th>
+            <th>Aksi</th>
+        </tr>
     </thead>
     <tbody>
         {% for t in transaksi %}
         <tr>
-            <td>{{ t.invoice.nomor_invoice }}</td>
-            <td>{{ t.payment_method.name }}{% if t.va_number %} · {{ t.va_number }}{% endif %}</td>
-            <td>Rp {{ t.amount|rupiah }}</td>
-            <td><span class="badge text-bg-{% if t.status == 'PAID' %}success{% elif t.status == 'FAILED' %}danger{% else %}secondary{% endif %}">{{ t.get_status_display }}</span></td>
             <td>
-                {% if t.payment_method.type == 'MANUAL_TRANSFER' or t.payment_method.type == 'CASH' %}
-                    <a href="{% url 'pembayaran:verifikasi_manual' t.pk %}" class="btn btn-sm btn-outline-primary">Verifikasi</a>
+                <a href="{% url 'pas:detail_pengajuan' t.invoice.pengajuan.pk %}">{{ t.invoice.pengajuan.nomor_pengajuan }}</a>
+                <div class="small text-muted">
+                    {{ t.invoice.pengajuan.nama_pemohon }}{% if t.invoice.pengajuan.instansi_pemohon %} — {{ t.invoice.pengajuan.instansi_pemohon }}{% endif %}
+                </div>
+                <div class="small text-muted">{{ t.invoice.pengajuan.layanan.nama_layanan }} · pelaksanaan {{ t.invoice.pengajuan.tanggal_pelaksanaan|date:"d M Y" }}</div>
+            </td>
+            <td>
+                {{ t.invoice.nomor_invoice }}
+                <div class="small text-muted">{{ t.invoice.get_status_display }}</div>
+            </td>
+            <td>{{ t.payment_method.name }}{% if t.va_number %}<div class="small text-muted">{{ t.va_number }}</div>{% endif %}</td>
+            <td class="text-nowrap">Rp {{ t.amount|rupiah }}</td>
+            <td>
+                <span class="badge text-bg-{% if t.status == 'PAID' %}success{% elif t.status == 'FAILED' %}danger{% elif t.status == 'PENDING' %}warning text-dark{% else %}secondary{% endif %}">{{ t.get_status_display }}</span>
+                {% if t.manual and t.manual.bukti %}
+                <div class="small"><a href="{{ t.manual.bukti.url }}" target="_blank">Lihat Bukti</a></div>
+                {% elif t.status == 'PENDING' %}
+                <div class="small text-warning">Belum unggah bukti</div>
                 {% endif %}
+            </td>
+            <td class="text-nowrap">
+                {% if t.status == 'PENDING' and t.manual %}
+                <a href="{% url 'pembayaran:verifikasi_manual' t.pk %}" class="btn btn-sm btn-primary">Verifikasi Bukti</a>
+                {% endif %}
+                <a href="{% url 'pembayaran:detail_transaksi' t.pk %}" class="btn btn-sm btn-outline-secondary">Detail</a>
                 {% if t.status == 'PAID' %}
-                    <a href="{% url 'pembayaran:minta_refund' t.pk %}" class="btn btn-sm btn-outline-danger">Refund</a>
+                <a href="{% url 'pembayaran:minta_refund' t.pk %}" class="btn btn-sm btn-outline-danger">Refund</a>
                 {% endif %}
             </td>
         </tr>
         {% empty %}
-        <tr><td colspan="5" class="text-center text-muted py-4">Tidak ada transaksi.</td></tr>
+        <tr><td colspan="6" class="text-center text-muted py-4">Tidak ada transaksi.</td></tr>
         {% endfor %}
     </tbody>
 </table>

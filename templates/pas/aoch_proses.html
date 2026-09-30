@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% load rupiah %}
+
+{% block title %}Nomor PAS Visitor (AOCH){% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                    <div>
+                        <h5 class="mb-1">{{ pengajuan.nomor_pengajuan }}</h5>
+                        <span class="badge text-bg-secondary">{{ pengajuan.get_status_display }}</span>
+                        {% if pengajuan.tanggal_berlaku_pas %}
+                        <span class="badge text-bg-{% if pengajuan.status_masa_berlaku == 'AKTIF' %}success{% elif pengajuan.status_masa_berlaku == 'KEDALUWARSA' %}danger{% else %}info{% endif %}">
+                            Berlaku {{ pengajuan.tanggal_berlaku_pas|date:"d M Y" }} — {{ pengajuan.status_masa_berlaku }}
+                        </span>
+                        {% endif %}
+                        {% if serah %}
+                        <span class="badge text-bg-dark">{{ serah.get_status_display }}</span>
+                        {% endif %}
+                    </div>
+                    <a href="{% url 'pas:aoch_list' %}" class="btn btn-sm btn-outline-secondary">Kembali</a>
+                </div>
+                <table class="table table-sm mt-3 mb-0">
+                    <tr><th style="width:200px">Pemohon / PIC</th><td>{{ pengajuan.nama_pemohon }}</td></tr>
+                    <tr><th>NIK PIC</th><td>{{ pengajuan.pic_nomor_identitas|default:"-" }}</td></tr>
+                    <tr><th>Layanan</th><td>{{ pengajuan.layanan.nama_layanan }} ({{ pengajuan.layanan.get_lokasi_display }})</td></tr>
+                    <tr><th>Pelaksanaan</th><td>{{ pengajuan.tanggal_pelaksanaan|date:"d M Y" }}{% if pengajuan.waktu_kedatangan %} pukul {{ pengajuan.waktu_kedatangan|time:"H:i" }}{% endif %}</td></tr>
+                    {% if pengajuan.tujuan %}<tr><th>Tujuan</th><td>{{ pengajuan.tujuan }}</td></tr>{% endif %}
+                    <tr><th>Total</th><td>Rp {{ pengajuan.total|rupiah }}</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="card-title">Input Nomor PAS Visitor</h6>
+                <p class="small text-muted">
+                    Nomor PAS diberikan kepada nama pendamping yang diajukan.
+                    Fisik PAS diserahkan &amp; dikembalikan oleh petugas Avsec.
+                </p>
+                {% if not pengajuan.tanggal_berlaku_pas %}
+                <div class="alert alert-warning py-2 small mb-2">
+                    PAS belum diterbitkan oleh Operasi — nomor PAS baru bisa disimpan
+                    setelah status berubah menjadi PAS Diterbitkan.
+                </div>
+                {% endif %}
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle">
+                            <thead><tr><th>#</th><th>Nama Pendamping</th><th>NIK</th><th>Nomor PAS Visitor</th></tr></thead>
+                            <tbody>
+                                {% for pd in pendamping %}
+                                <tr>
+                                    <td>{{ pd.urutan }}</td>
+                                    <td>{{ pd.nama }}</td>
+                                    <td class="font-monospace">{{ pd.nik }}</td>
+                                    <td>
+                                        <input type="text" name="nomor_pas_{{ pd.pk }}" class="form-control"
+                                               value="{{ pd.nomor_pas }}" placeholder="cth: PAS-20260930-001">
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="4" class="text-muted">Tidak ada pendamping.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <button type="submit" name="aksi" value="simpan_nomor" class="btn btn-outline-primary btn-sm"
+                            {% if not pengajuan.tanggal_berlaku_pas %}disabled{% endif %}>
+                        Simpan Nomor PAS
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="card-title">Status Serah Terima (dicatat Avsec)</h6>
+                {% if serah %}
+                <table class="table table-sm mb-3">
+                    <tr>
+                        <th style="width:200px">Status</th>
+                        <td><span class="badge text-bg-{% if serah.status == 'DIKEMBALIKAN' %}success{% elif serah.status == 'DITERIMA' %}primary{% else %}secondary{% endif %}">{{ serah.get_status_display }}</span></td>
+                    </tr>
+                    <tr><th>Penerima</th><td>{{ serah.penerima_nama|default:"-" }}{% if serah.penerima_nik %} · {{ serah.penerima_nik }}{% endif %}{% if serah.penerima_delegasi %} · Ditugaskan: {{ serah.penerima_delegasi }}{% endif %}</td></tr>
+                    <tr>
+                        <th>Penyerahan</th>
+                        <td>{% if serah.tanggal_penyerahan %}{{ serah.tanggal_penyerahan|date:"d M Y H:i" }} WIB{% else %}-{% endif %}</td>
+                    </tr>
+                    <tr>
+                        <th>Pengembalian</th>
+                        <td>{% if serah.tanggal_pengembalian %}{{ serah.tanggal_pengembalian|date:"d M Y H:i" }} WIB{% else %}-{% endif %}</td>
+                    </tr>
+                    {% if serah.catatan %}<tr><th>Catatan</th><td>{{ serah.catatan }}</td></tr>{% endif %}
+                </table>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="border rounded p-2 text-center h-100">
+                            <div class="small text-muted mb-1">Foto Penyerahan</div>
+                            {% if serah.foto_penyerahan %}
+                            <img src="{{ serah.foto_penyerahan.url }}" alt="Foto penyerahan"
+                                 style="max-height:200px; width:100%; object-fit:cover; border-radius:8px;">
+                            {% else %}
+                            <div class="text-muted small py-4">Belum ada foto</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border rounded p-2 text-center h-100">
+                            <div class="small text-muted mb-1">Tanda Tangan Elektronik</div>
+                            {% if serah.ttd_elektronik %}
+                            <img src="{{ serah.ttd_elektronik.url }}" alt="TTD elektronik"
+                                 style="max-height:200px; width:100%; object-fit:contain; background:#f8f9fa; border-radius:8px;">
+                            {% else %}
+                            <div class="text-muted small py-4">Belum ada tanda tangan</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0 small">
+                    Penyerahan, foto &amp; tanda tangan elektronik dicatat oleh petugas
+                    Avsec pada halaman Serah Terima.
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
