@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -263,8 +264,7 @@ def buat_pengajuan(request):
     user = request.user if request.user.is_authenticated else None
 
     if request.method == "POST" and request.POST.get("aksi") == "paham-batasan":
-        request.session["paham_batasan_area"] = True
-        return redirect("pas:buat_pengajuan")
+        return redirect(reverse("pas:buat_pengajuan") + "?langkah=form")
 
     if request.method == "POST":
         jumlah = _jumlah_pendamping(request.POST)
@@ -365,7 +365,7 @@ def buat_pengajuan(request):
                 ),
             )
     else:
-        if not request.session.get("paham_batasan_area"):
+        if request.GET.get("langkah") != "form":
             return render(
                 request,
                 "pas/batasan_area.html",
@@ -493,7 +493,7 @@ def detail_pengajuan(request, pk):
         if not request.user.is_authenticated:
             messages.info(
                 request,
-                "Masukkan nomor pengajuan dan kontak untuk melihat status pengajuan.",
+                "Masukkan NIK PIC atau nomor pengajuan untuk melihat status pengajuan.",
             )
             return redirect("pas:lacak_pengajuan")
         return redirect("pas:daftar_pengajuan")
@@ -579,26 +579,50 @@ def pengajuan_sukses(request):
 
 
 def lacak_pengajuan(request):
-    """Lacak status pengajuan dengan nomor + kontak (tanpa akun)."""
+    """Lacak status pengajuan dengan NIK PIC atau nomor pengajuan (tanpa akun).
+
+    Hanya menampilkan pengajuan yang tanggal pelaksanaannya belum lampau,
+    supaya daftar hasil tidak rancu.
+    """
+    hasil = []
+    dicari = False
+    kata_kunci = ""
     error = ""
-    nomor = ""
     if request.method == "POST":
-        nomor = (request.POST.get("nomor_pengajuan") or "").strip()
-        kontak = (request.POST.get("kontak") or "").strip()
-        pengajuan = Pengajuan.objects.filter(nomor_pengajuan__iexact=nomor).first()
-        if pengajuan and _kontak_cocok(pengajuan, kontak):
+        kata_kunci = (request.POST.get("kata_kunci") or "").strip()
+        if not kata_kunci:
+            error = "Isi NIK PIC atau nomor pengajuan terlebih dahulu."
+        else:
+            dicari = True
+            hasil = list(
+                Pengajuan.objects.select_related("layanan")
+                .filter(tanggal_pelaksanaan__gte=timezone.localdate())
+                .filter(
+                    Q(nomor_pengajuan__iexact=kata_kunci)
+                    | Q(pic_nomor_identitas__iexact=kata_kunci)
+                )
+                .order_by("tanggal_pelaksanaan", "-created_at")
+            )
             ids = request.session.get("lacak_pengajuan", [])
-            if pengajuan.pk not in ids:
-                ids.append(pengajuan.pk)
+            for p in hasil:
+                if p.pk not in ids:
+                    ids.append(p.pk)
             request.session["lacak_pengajuan"] = ids[-20:]
-            return redirect("pas:lacak_detail", pk=pengajuan.pk)
-        error = "Nomor pengajuan dan kontak tidak cocok. Periksa kembali data Anda."
-    return render(request, "pas/lacak.html", {"error": error, "nomor": nomor})
+    return render(
+        request,
+        "pas/lacak.html",
+        {
+            "hasil": hasil,
+            "dicari": dicari,
+            "kata_kunci": kata_kunci,
+            "error": error,
+        },
+    )
 
 
 def lacak_detail(request, pk):
     if pk not in request.session.get("lacak_pengajuan", []):
-        messages.info(request, "Masukkan nomor pengajuan dan kontak untuk melihat status.")
+        messages.info(request, "Masukkan NIK PIC atau nomor pengajuan untuk melihat status.")
         return redirect("pas:lacak_pengajuan")
     pengajuan = get_object_or_404(Pengajuan.objects.select_related("layanan"), pk=pk)
     invoice = Invoice.objects.filter(pengajuan=pengajuan).first()
@@ -843,7 +867,7 @@ def terbitkan_pas(request, pk):
             )
             return redirect("pas:operasi_proses", pk=pk)
 
-        pengajuan.tanggal_berlaku_pas = timezone.localdate()
+        pengajuan.tanggal_berlaku_pas = pengajuan.tanggal_pelaksanaan
         pengajuan.save(update_fields=["tanggal_berlaku_pas", "updated_at"])
         _set_status(pengajuan, Pengajuan.Status.PAS_TERBIT, request.user)
         notify_pemohon(
@@ -944,8 +968,8 @@ def aoch_list(request):
     return render(request, "pas/aoch_list.html", {"pengajuan": query})
 
 
-def _simpan_ttd(data_url):
-    """Ubah tanda tangan elektronik (data URL PNG) menjadi file gambar."""
+def _data_url_ke_file(data_url, prefix):
+    """Ubah data URL (gambar PNG/JPEG) menjadi ContentFile untuk disimpan."""
     import base64 as _base64
 
     from django.core.files.base import ContentFile
@@ -958,7 +982,17 @@ def _simpan_ttd(data_url):
     except (ValueError, TypeError):
         return None
     ext = "png" if "png" in meta else "jpg"
-    return ContentFile(raw, name=f"ttd_{timezone.now():%Y%m%d%H%M%S}.{ext}")
+    return ContentFile(raw, name=f"{prefix}_{timezone.now():%Y%m%d%H%M%S}.{ext}")
+
+
+def _simpan_ttd(data_url):
+    """Ubah tanda tangan elektronik (data URL PNG) menjadi file gambar."""
+    return _data_url_ke_file(data_url, "ttd")
+
+
+def _simpan_foto(data_url):
+    """Ubah foto kamera (data URL JPEG/PNG) menjadi file gambar."""
+    return _data_url_ke_file(data_url, "foto")
 
 
 @login_required
@@ -1079,7 +1113,9 @@ def avsec_serah_terima(request, pk):
                     "Nomor PAS belum diinput AOCH untuk: " + ", ".join(belum) + ".",
                 )
                 return redirect("pas:avsec_serah_terima", pk=pk)
-            foto = request.FILES.get("foto")
+            foto = request.FILES.get("foto") or _simpan_foto(
+                request.POST.get("foto_data", "")
+            )
             ttd = _simpan_ttd(request.POST.get("ttd_data", ""))
             penerima = (request.POST.get("penerima_nama") or "").strip()
             if not foto and not serah.foto_penyerahan:
@@ -1129,9 +1165,23 @@ def avsec_serah_terima(request, pk):
             if serah.status != SerahTerimaPAS.Status.DITERIMA:
                 messages.error(request, "PAS belum diserahkan, tidak bisa dikembalikan.")
                 return redirect("pas:avsec_serah_terima", pk=pk)
+            foto = request.FILES.get("foto") or _simpan_foto(
+                request.POST.get("foto_data", "")
+            )
+            ttd = _simpan_ttd(request.POST.get("ttd_data", ""))
+            if not foto and not serah.foto_pengembalian:
+                messages.error(request, "Foto pengembalian wajib diambil lewat kamera atau diunggah.")
+                return redirect("pas:avsec_serah_terima", pk=pk)
+            if ttd is None and not serah.ttd_pengembalian:
+                messages.error(request, "Tanda tangan elektronik pengembalian wajib dibuat.")
+                return redirect("pas:avsec_serah_terima", pk=pk)
             serah.status = SerahTerimaPAS.Status.DIKEMBALIKAN
             serah.tanggal_pengembalian = timezone.now()
             serah.petugas = request.user
+            if foto:
+                serah.foto_pengembalian = foto
+            if ttd is not None:
+                serah.ttd_pengembalian = ttd
             serah.save()
             notify_pemohon(
                 pengajuan,

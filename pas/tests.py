@@ -67,7 +67,9 @@ class PengajuanBaruTests(TestCase):
         self.url = reverse("pas:buat_pengajuan")
 
     def _setuju_batasan(self):
-        self.client.post(self.url, {"aksi": "paham-batasan"})
+        resp = self.client.post(self.url, {"aksi": "paham-batasan"})
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("?langkah=form", resp["Location"])
 
     def test_pemberitahuan_batasan_area_muncul_sebelum_form(self):
         resp = self.client.get(self.url)
@@ -79,7 +81,7 @@ class PengajuanBaruTests(TestCase):
 
     def test_form_muncul_setelah_paham_batasan(self):
         self._setuju_batasan()
-        resp = self.client.get(self.url)
+        resp = self.client.get(self.url + "?langkah=form")
         self.assertTemplateUsed(resp, "pas/buat_pengajuan.html")
         self.assertContains(resp, "PIC Penanggung Jawab Langsung")
         self.assertContains(resp, "layanan-option")
@@ -87,8 +89,15 @@ class PengajuanBaruTests(TestCase):
 
     def test_layanan_ditampilkan_dengan_harga(self):
         self._setuju_batasan()
-        resp = self.client.get(self.url)
+        resp = self.client.get(self.url + "?langkah=form")
         self.assertContains(resp, "Rp 1.000.000")
+
+    def test_batasan_area_selalu_muncul_tiap_kunjungan_baru(self):
+        resp = self.client.get(self.url)
+        self.assertTemplateUsed(resp, "pas/batasan_area.html")
+        self._setuju_batasan()
+        resp = self.client.get(self.url)
+        self.assertTemplateUsed(resp, "pas/batasan_area.html")
 
     def test_submit_lolos_langsung_ke_pembayaran(self):
         self._setuju_batasan()
@@ -619,7 +628,11 @@ class AvsecSerahTerimaTests(TestCase):
         )
         self.client.post(
             reverse("pas:avsec_serah_terima", args=[self.pengajuan.pk]),
-            {"aksi": "kembalikan"},
+            {
+                "aksi": "kembalikan",
+                "foto": SimpleUploadedFile("foto-kembali.jpg", _png_bytes()),
+                "ttd_data": ttd,
+            },
         )
         self.pengajuan.refresh_from_db()
         self.assertEqual(
@@ -627,6 +640,8 @@ class AvsecSerahTerimaTests(TestCase):
             self.pengajuan.serah_terima.Status.DIKEMBALIKAN,
         )
         self.assertIsNotNone(self.pengajuan.serah_terima.tanggal_pengembalian)
+        self.assertTrue(self.pengajuan.serah_terima.foto_pengembalian)
+        self.assertTrue(self.pengajuan.serah_terima.ttd_pengembalian)
 
         self.client.post(
             reverse("pas:avsec_serah_terima", args=[self.pengajuan.pk]),
@@ -807,7 +822,11 @@ class AlurLengkapSampaiSelesaiTests(TestCase):
         # 5. Pengembalian fisik
         self.client.post(
             reverse("pas:avsec_serah_terima", args=[self.pengajuan.pk]),
-            {"aksi": "kembalikan"},
+            {
+                "aksi": "kembalikan",
+                "foto": SimpleUploadedFile("foto-kembali.png", _png_bytes(), content_type="image/png"),
+                "ttd_data": ttd,
+            },
         )
         serah.refresh_from_db()
         self.assertEqual(serah.status, SerahTerimaPAS.Status.DIKEMBALIKAN)

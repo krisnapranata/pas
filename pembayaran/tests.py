@@ -623,7 +623,7 @@ class StatusBuktiTerunggahTests(TestCase):
         self.pengajuan.refresh_from_db()
         self.assertEqual(self.pengajuan.status, Pengajuan.Status.MENUNGGU_PEMBAYARAN)
 
-    def test_verifikasi_valid_menjadi_sudah_dibayar(self):
+    def test_verifikasi_valid_langsung_diteruskan_ke_operasi(self):
         self._unggah()
         self.client.force_login(self.komersil)
         self.client.post(
@@ -631,7 +631,7 @@ class StatusBuktiTerunggahTests(TestCase):
             {"keputusan": "VALID"},
         )
         self.pengajuan.refresh_from_db()
-        self.assertEqual(self.pengajuan.status, Pengajuan.Status.DIBAYAR)
+        self.assertEqual(self.pengajuan.status, Pengajuan.Status.MENUNGGU_OPERASI)
 
     def test_menu_bayar_masih_bisa_dibuka_setelah_status_baru(self):
         self._unggah()

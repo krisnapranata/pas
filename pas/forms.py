@@ -1,4 +1,5 @@
 from django import forms
+from django.utils import timezone
 
 from .models import DaftarHitam, Layanan, Pengajuan
 from .services import normalisasi_nik
@@ -57,6 +58,7 @@ class PengajuanForm(forms.ModelForm):
         self.fields["jumlah_tamu"].initial = 0
         self.fields["pic_nama"].required = True
         self.fields["pic_no_hp"].required = True
+        self.fields["tanggal_pelaksanaan"].widget.attrs["min"] = timezone.localdate().isoformat()
         self.fields["pic_email"].required = False
         # PIC penanggung jawab adalah pengganti "Data Pemohon" lama
         if user is not None and user.is_authenticated and not self.is_bound:

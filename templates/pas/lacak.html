@@ -4,13 +4,13 @@
 
 {% block content %}
 <div class="row justify-content-center mt-4">
-    <div class="col-lg-6">
+    <div class="col-lg-8">
         <div class="card shadow-sm">
             <div class="card-body p-4">
                 <h4 class="mb-2">Lacak Pengajuan</h4>
                 <p class="text-muted small mb-4">
-                    Masukkan nomor pengajuan dan kontak (No. HP atau email) yang Anda daftarkan
-                    saat mengirim pengajuan.
+                    Masukkan NIK PIC atau nomor pengajuan untuk melacak status.
+                    Hanya pengajuan yang tanggal pelaksanaannya belum lampau yang ditampilkan.
                 </p>
 
                 {% if error %}
@@ -20,24 +20,60 @@
                 <form method="post">
                     {% csrf_token %}
                     <div class="mb-3">
-                        <label class="form-label">Nomor Pengajuan</label>
-                        <input type="text" name="nomor_pengajuan" class="form-control"
-                               value="{{ nomor }}" placeholder="cth: REQ-20260924-0001" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">No. HP atau Email</label>
-                        <input type="text" name="kontak" class="form-control"
-                               placeholder="cth: 081234567890 atau nama@email.com" required>
+                        <label class="form-label">NIK PIC atau Nomor Pengajuan</label>
+                        <input type="text" name="kata_kunci" class="form-control"
+                               value="{{ kata_kunci }}"
+                               placeholder="cth: 3175000000000088 atau REQ-20260930-0001" required>
                     </div>
                     <button type="submit" class="btn btn-primary w-100">Lacak Status</button>
                 </form>
-
-                <hr class="my-4">
-                <p class="text-center mb-0 small">
-                    Belum mengajukan? <a href="{% url 'pas:buat_pengajuan' %}">Buat Pengajuan</a>
-                </p>
             </div>
         </div>
+
+        {% if dicari %}
+        <div class="card shadow-sm mt-3">
+            <div class="card-body p-4">
+                <h6 class="card-title">Hasil Pencarian</h6>
+                {% if hasil %}
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead>
+                            <tr>
+                                <th>Nomor Pengajuan</th>
+                                <th>Layanan</th>
+                                <th>Tanggal Pelaksanaan</th>
+                                <th>Status</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in hasil %}
+                            <tr>
+                                <td>{{ p.nomor_pengajuan }}</td>
+                                <td>{{ p.layanan.nama_layanan }}</td>
+                                <td>{{ p.tanggal_pelaksanaan|date:"d M Y" }}</td>
+                                <td><span class="badge text-bg-primary">{{ p.get_status_display }}</span></td>
+                                <td class="text-end">
+                                    <a href="{% url 'pas:lacak_detail' p.pk %}" class="btn btn-sm btn-outline-primary">Detail</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">
+                    Tidak ditemukan pengajuan yang cocok (atau tanggalnya sudah lampau).
+                    Periksa kembali NIK PIC atau nomor pengajuan Anda.
+                </p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <p class="text-center mt-3 mb-0 small">
+            Belum mengajukan? <a href="{% url 'pas:buat_pengajuan' %}">Buat Pengajuan</a>
+        </p>
     </div>
 </div>
 {% endblock %}

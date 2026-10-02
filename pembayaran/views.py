@@ -374,26 +374,25 @@ def tandai_lunas(request, transaksi):
     invoice.status = Invoice.Status.PAID
     invoice.save(update_fields=["status", "updated_at"])
     pengajuan = invoice.pengajuan
-    if pengajuan.status != Pengajuan.Status.DIBAYAR:
-        set_status(pengajuan, Pengajuan.Status.DIBAYAR, request.user)
+    if pengajuan.status != Pengajuan.Status.MENUNGGU_OPERASI:
+        set_status(pengajuan, Pengajuan.Status.MENUNGGU_OPERASI, request.user)
     log_action(request, "PAYMENT_PAID", "PaymentTransaction", transaksi.pk)
     notify_role(
-        "KOMERSIL",
-        "Bukti bayar tervalidasi",
-        f"Pembayaran {invoice.nomor_invoice} (Rp {format_rupiah(transaksi.amount)}) "
-        f"untuk pengajuan {pengajuan.nomor_pengajuan} lunas. Silakan teruskan ke "
-        "Operasi untuk penerbitan PAS.",
-        url=f"/pas/verifikasi/",
+        "OPERASI",
+        "Siap terbitkan PAS",
+        f"Pengajuan {pengajuan.nomor_pengajuan} sudah dibayar & menunggu "
+        "pengecekan ulang daftar hitam serta penerbitan PAS.",
+        url=f"/pas/operasi/{pengajuan.pk}/",
         pengajuan=pengajuan,
     )
     notify_pemohon(
         pengajuan,
         "Pembayaran diterima",
-        f"Pembayaran pengajuan {pengajuan.nomor_pengajuan} telah diverifikasi. "
-        "Pengajuan diteruskan ke Operasi untuk penerbitan PAS.",
+        f"Pembayaran pengajuan {pengajuan.nomor_pengajuan} telah diverifikasi dan "
+        "diteruskan ke Operasi untuk penerbitan PAS.",
         url=f"/pas/lacak/{pengajuan.pk}/",
     )
-    messages.success(request, "Pembayaran diverifikasi lunas.")
+    messages.success(request, "Pembayaran diverifikasi lunas dan diteruskan ke Operasi.")
     return redirect("pembayaran:verifikasi_manual", pk=transaksi.pk)
 
 

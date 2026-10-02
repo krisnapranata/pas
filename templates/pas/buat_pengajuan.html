@@ -169,6 +169,16 @@
                         Isi nama, NIK, dan unggah dokumen identitas (PDF atau gambar) tiap pendamping.
                         NIK akan dicek ke daftar hitam saat tombol kirim ditekan.
                     </p>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="pendamping1_pic">
+                        <label class="form-check-label" for="pendamping1_pic">
+                            Pendamping 1 = PIC Penanggung Jawab
+                        </label>
+                        <div class="form-text small text-muted">
+                            Centang bila penanggung jawab sekaligus menjadi pendamping pertama,
+                            agar nama dan NIK tidak perlu diketik ulang.
+                        </div>
+                    </div>
                     <div id="pendamping-area" class="mb-3"></div>
 
                     <button type="submit" class="btn btn-primary">
@@ -225,6 +235,25 @@ const existingNames = parseList('pendamping-names');
 const existingNiks = parseList('pendamping-niks');
 const existingFiles = parseObj('pendamping-files');
 function esc(v) { return (v || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function picNama() {
+    const el = document.getElementById('id_pic_nama');
+    return el ? el.value : '';
+}
+function picNik() {
+    const el = document.getElementById('id_pic_nomor_identitas');
+    return el ? el.value : '';
+}
+function pendamping1PakaiPIC() {
+    const cb = document.getElementById('pendamping1_pic');
+    return !!(cb && cb.checked);
+}
+function sinkronPendamping1DariPIC() {
+    if (!pendamping1PakaiPIC()) { return; }
+    const namaEl = document.querySelector('[name="pendamping_nama_1"]');
+    const nikEl = document.querySelector('[name="pendamping_nik_1"]');
+    if (namaEl) { namaEl.value = picNama(); }
+    if (nikEl) { nikEl.value = picNik(); }
+}
 let renderedPendamping = -1;
 function renderPendamping(n, force) {
     if (n === renderedPendamping && !force) { return; }
@@ -247,8 +276,13 @@ function renderPendamping(n, force) {
         return;
     }
     for (let i = 1; i <= n; i++) {
-        const name = curNames[i - 1] || existingNames[i - 1] || '';
-        const nik = curNiks[i - 1] || existingNiks[i - 1] || '';
+        const pakaiPic = i === 1 && pendamping1PakaiPIC();
+        const name = pakaiPic ? picNama() : (curNames[i - 1] || existingNames[i - 1] || '');
+        const nik = pakaiPic ? picNik() : (curNiks[i - 1] || existingNiks[i - 1] || '');
+        const ro = pakaiPic ? ' readonly' : '';
+        const catatanPic = pakaiPic
+            ? '<div class="small text-muted mt-1">Nama &amp; NIK diisi otomatis dari data PIC.</div>'
+            : '';
         const namaFile = curFiles[i - 1] || existingFiles[String(i)] || '';
         const catatanFile = namaFile
             ? '<div class="small text-success mt-1" data-file-terkirim="' + i + '"' +
@@ -260,11 +294,12 @@ function renderPendamping(n, force) {
         div.innerHTML =
             '<div class="col-md-4">' +
             '<label class="form-label">Nama Pendamping ' + i + '</label>' +
-            '<input type="text" name="pendamping_nama_' + i + '" class="form-control" value="' + esc(name) + '" placeholder="Nama pendamping ' + i + '" required>' +
+            '<input type="text" name="pendamping_nama_' + i + '" class="form-control" value="' + esc(name) + '" placeholder="Nama pendamping ' + i + '"' + ro + ' required>' +
             '</div>' +
             '<div class="col-md-3">' +
             '<label class="form-label">NIK / No. Identitas ' + i + '</label>' +
-            '<input type="text" name="pendamping_nik_' + i + '" class="form-control" inputmode="numeric" value="' + esc(nik) + '" placeholder="16 digit NIK" required>' +
+            '<input type="text" name="pendamping_nik_' + i + '" class="form-control" inputmode="numeric" value="' + esc(nik) + '" placeholder="16 digit NIK"' + ro + ' required>' +
+            catatanPic +
             '</div>' +
             '<div class="col-md-5">' +
             '<label class="form-label">Dokumen Identitas (PDF / Gambar) ' + i + '</label>' +
@@ -282,6 +317,16 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     input.addEventListener('change', function () {
         renderPendamping(parseInt(input.value || '0', 10));
+    });
+    const cbPendamping1 = document.getElementById('pendamping1_pic');
+    if (cbPendamping1) {
+        cbPendamping1.addEventListener('change', function () {
+            renderPendamping(parseInt(input.value || '0', 10), true);
+        });
+    }
+    ['id_pic_nama', 'id_pic_nomor_identitas'].forEach(function (id) {
+        const el = document.getElementById(id);
+        if (el) { el.addEventListener('input', sinkronPendamping1DariPIC); }
     });
     sorotIsianBlacklist();
 });

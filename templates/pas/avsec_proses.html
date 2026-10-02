@@ -64,8 +64,16 @@
                 <h6 class="card-title">2. Penyerahan &amp; Pengembalian</h6>
                 <p class="small text-muted">
                     Penyerahan cukup diwakilkan oleh PIC pemohon atau orang yang ditugaskan.
-                    Foto &amp; tanda tangan elektronik dicatat saat menyerahkan.
+                    Foto &amp; tanda tangan elektronik dicatat saat menyerahkan dan saat
+                    mengembalikan PAS.
                 </p>
+
+                {% if serah.status == 'DITERIMA' %}
+                <div class="alert alert-warning py-2 small">
+                    PAS sudah diserahkan. Silakan catat <strong>pengembalian</strong> dengan
+                    foto &amp; tanda tangan orang yang mengembalikan PAS.
+                </div>
+                {% endif %}
 
                 <div class="row g-3 mb-3">
                     <div class="col-md-6">
@@ -84,18 +92,42 @@
                     </div>
                     <div class="col-md-6">
                         <div class="border rounded p-2 text-center h-100">
-                            <div class="small text-muted mb-1">Tanda Tangan Elektronik</div>
+                            <div class="small text-muted mb-1">Tanda Tangan Penyerahan</div>
                             {% if serah.ttd_elektronik %}
-                            <img src="{{ serah.ttd_elektronik.url }}" alt="TTD elektronik"
+                            <img src="{{ serah.ttd_elektronik.url }}" alt="TTD penyerahan"
                                  style="max-height:220px; width:100%; object-fit:contain; background:#f8f9fa; border-radius:8px;">
                             {% else %}
                             <div class="text-muted small py-4">Belum ada tanda tangan</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if serah.foto_pengembalian or serah.ttd_pengembalian or serah.tanggal_pengembalian %}
+                    <div class="col-md-6">
+                        <div class="border rounded p-2 text-center h-100">
+                            <div class="small text-muted mb-1">Foto Pengembalian</div>
+                            {% if serah.foto_pengembalian %}
+                            <img src="{{ serah.foto_pengembalian.url }}" alt="Foto pengembalian"
+                                 style="max-height:220px; width:100%; object-fit:cover; border-radius:8px;">
+                            {% else %}
+                            <div class="text-muted small py-4">Belum ada foto</div>
                             {% endif %}
                             {% if serah.tanggal_pengembalian %}
                             <div class="small mt-1 text-danger">Dikembalikan {{ serah.tanggal_pengembalian|date:"d M Y H:i" }} WIB</div>
                             {% endif %}
                         </div>
                     </div>
+                    <div class="col-md-6">
+                        <div class="border rounded p-2 text-center h-100">
+                            <div class="small text-muted mb-1">Tanda Tangan Pengembalian</div>
+                            {% if serah.ttd_pengembalian %}
+                            <img src="{{ serah.ttd_pengembalian.url }}" alt="TTD pengembalian"
+                                 style="max-height:220px; width:100%; object-fit:contain; background:#f8f9fa; border-radius:8px;">
+                            {% else %}
+                            <div class="text-muted small py-4">Belum ada tanda tangan</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
 
                 <form method="post" id="serah-form" enctype="multipart/form-data">
@@ -123,11 +155,32 @@
                                    placeholder="Diisi bila diwakilkan orang lain">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Foto Orang yang Menerima <span class="text-danger">*</span></label>
-                            <input type="file" name="foto" class="form-control" accept="image/*">
+                            <label class="form-label">
+                                {% if serah.status == 'DITERIMA' %}Foto Orang yang Mengembalikan{% else %}Foto Orang yang Menerima{% endif %}
+                                <span class="text-danger">*</span>
+                            </label>
+                            <div class="border rounded p-2 text-center">
+                                <video id="kamera" autoplay playsinline muted
+                                       style="width:100%; max-height:240px; object-fit:cover; border-radius:8px; background:#000; display:none;"></video>
+                                <img id="foto-preview" alt="Foto penerima"
+                                     style="max-height:240px; width:100%; object-fit:cover; border-radius:8px; display:none;">
+                                <div id="camera-empty" class="text-muted small py-4">
+                                    Belum ada foto baru. Gunakan kamera atau unggah berkas.
+                                </div>
+                            </div>
+                            <div class="mt-2 d-flex gap-2 flex-wrap">
+                                <button type="button" id="buka-kamera" class="btn btn-sm btn-outline-primary">Buka Kamera</button>
+                                <button type="button" id="ambil-foto" class="btn btn-sm btn-primary" style="display:none;">Ambil Foto</button>
+                                <button type="button" id="hapus-foto" class="btn btn-sm btn-outline-secondary" style="display:none;">Hapus</button>
+                            </div>
+                            <input type="file" name="foto" class="form-control mt-2" accept="image/*">
+                            <input type="hidden" name="foto_data" id="foto_data">
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Tanda Tangan Elektronik <span class="text-danger">*</span></label>
+                            <label class="form-label">
+                                {% if serah.status == 'DITERIMA' %}Tanda Tangan Pengembalian{% else %}Tanda Tangan Elektronik{% endif %}
+                                <span class="text-danger">*</span>
+                            </label>
                             <canvas id="ttd" width="480" height="150"
                                     style="width:100%; max-width:480px; border:1px dashed #adb5bd; border-radius:8px; background:#fff; touch-action:none;"></canvas>
                             <div class="mt-1">
@@ -135,6 +188,10 @@
                                 <span class="small text-muted ms-1">Tanda tangan dengan mouse / jari.</span>
                             </div>
                             <input type="hidden" name="ttd_data" id="ttd_data">
+                            <input type="hidden" id="existing_foto_serah" value="{% if serah.foto_penyerahan %}1{% else %}0{% endif %}">
+                            <input type="hidden" id="existing_ttd_serah" value="{% if serah.ttd_elektronik %}1{% else %}0{% endif %}">
+                            <input type="hidden" id="existing_foto_kembali" value="{% if serah.foto_pengembalian %}1{% else %}0{% endif %}">
+                            <input type="hidden" id="existing_ttd_kembali" value="{% if serah.ttd_pengembalian %}1{% else %}0{% endif %}">
                         </div>
                         <div class="col-12">
                             <label class="form-label">Catatan</label>
@@ -207,17 +264,73 @@
         hidden.value = '';
     });
 
+    // ---------- Kamera in-app untuk foto penyerahan ----------
+    const video = document.getElementById('kamera');
+    const preview = document.getElementById('foto-preview');
+    const fotoData = document.getElementById('foto_data');
+    const cameraEmpty = document.getElementById('camera-empty');
+    const btnBuka = document.getElementById('buka-kamera');
+    const btnAmbil = document.getElementById('ambil-foto');
+    const btnHapus = document.getElementById('hapus-foto');
+    const canvasFoto = document.createElement('canvas');
+    let stream = null;
+
+    function stopKamera() {
+        if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
+    }
+    btnBuka.addEventListener('click', function () {
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+            .then(function (s) {
+                stream = s;
+                video.srcObject = s;
+                video.style.display = 'block';
+                cameraEmpty.style.display = 'none';
+                btnBuka.style.display = 'none';
+                btnAmbil.style.display = '';
+            })
+            .catch(function (err) {
+                alert('Tidak dapat membuka kamera: ' + (err && err.message ? err.message : err));
+            });
+    });
+    btnAmbil.addEventListener('click', function () {
+        canvasFoto.width = video.videoWidth || 640;
+        canvasFoto.height = video.videoHeight || 480;
+        canvasFoto.getContext('2d').drawImage(video, 0, 0, canvasFoto.width, canvasFoto.height);
+        fotoData.value = canvasFoto.toDataURL('image/jpeg', 0.9);
+        preview.src = fotoData.value;
+        preview.style.display = 'block';
+        video.style.display = 'none';
+        stopKamera();
+        btnAmbil.style.display = 'none';
+        btnBuka.style.display = '';
+        btnHapus.style.display = '';
+        cameraEmpty.style.display = 'none';
+    });
+    btnHapus.addEventListener('click', function () {
+        fotoData.value = '';
+        preview.removeAttribute('src');
+        preview.style.display = 'none';
+        btnHapus.style.display = 'none';
+        cameraEmpty.style.display = '';
+    });
+
     document.getElementById('serah-form').addEventListener('submit', function (e) {
         const aksi = e.submitter ? e.submitter.value : '';
-        if (aksi === 'serahkan') {
-            if (!hidden.value) {
+        if (aksi === 'serahkan' || aksi === 'kembalikan') {
+            const serahMode = aksi === 'serahkan';
+            const existingTtd = document.getElementById(serahMode ? 'existing_ttd_serah' : 'existing_ttd_kembali').value === '1';
+            const existingFoto = document.getElementById(serahMode ? 'existing_foto_serah' : 'existing_foto_kembali').value === '1';
+            const adaTtd = hidden.value !== '' || existingTtd;
+            if (!adaTtd) {
                 alert('Tanda tangan elektronik wajib dibuat terlebih dahulu.');
                 e.preventDefault();
                 return;
             }
             const foto = document.querySelector('input[name="foto"]');
-            if (foto && !foto.files.length) {
-                alert('Foto penyerahan wajib diunggah.');
+            const adaFoto = fotoData.value !== '' || (foto && foto.files.length > 0) || existingFoto;
+            if (!adaFoto) {
+                alert(serahMode ? 'Foto penyerahan wajib diambil lewat kamera atau diunggah.'
+                                : 'Foto pengembalian wajib diambil lewat kamera atau diunggah.');
                 e.preventDefault();
             }
         } else if (hidden.value === '') {

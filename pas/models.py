@@ -335,6 +335,12 @@ class SerahTerimaPAS(models.Model):
     ttd_elektronik = models.ImageField(
         "Tanda Tangan Elektronik", upload_to="pas/serah_terima/ttd/", null=True, blank=True
     )
+    foto_pengembalian = models.ImageField(
+        "Foto Pengembalian", upload_to="pas/serah_terima/foto/", null=True, blank=True
+    )
+    ttd_pengembalian = models.ImageField(
+        "Tanda Tangan Pengembalian", upload_to="pas/serah_terima/ttd/", null=True, blank=True
+    )
     tanggal_penyerahan = models.DateTimeField(null=True, blank=True)
     tanggal_pengembalian = models.DateTimeField(null=True, blank=True)
     catatan = models.TextField(blank=True)

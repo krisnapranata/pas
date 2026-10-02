@@ -19,11 +19,8 @@ BATASAN_AREA = {
         "Area Check-in Counter (domestic & international)",
         "Area Security Check (Avsec) / pemeriksaan barang bawaan",
         "Ruang tunggu penumpang / Boarding Lounge",
-        "Area Garbarata / Aerobridge sampai pintu pesawat",
     ],
     "ARRIVAL": [
-        "Area kedatangan / pendaratan pesawat",
-        "Area imigrasi & bea cukai (untuk penerbangan internasional)",
         "Area pengambilan bagasi (Baggage Claim)",
         "Area Arrival Hall sampai pintu keluar (Meeting Point)",
     ],
