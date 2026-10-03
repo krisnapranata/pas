@@ -63,18 +63,23 @@
                             {{ form.pic_jabatan }}
                             {{ form.pic_jabatan.errors }}
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label">NIK / Nomor Identitas</label>
                             {{ form.pic_nomor_identitas }}
                             {{ form.pic_nomor_identitas.errors }}
                             <div class="form-text">Dicek ke daftar hitam saat pengajuan dikirim.</div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
+                            <label class="form-label">NPWP <span class="text-danger">*</span></label>
+                            {{ form.pic_npwp }}
+                            {{ form.pic_npwp.errors }}
+                        </div>
+                        <div class="col-md-3">
                             <label class="form-label">No. HP <span class="text-danger">*</span></label>
                             {{ form.pic_no_hp }}
                             {{ form.pic_no_hp.errors }}
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label">Email</label>
                             {{ form.pic_email }}
                             {{ form.pic_email.errors }}

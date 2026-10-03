@@ -44,6 +44,7 @@ def _form_payload(layanan, **extra):
         "pic_nama": "Andi PIC",
         "pic_jabatan": "Manajer",
         "pic_nomor_identitas": "3175000000000099",
+        "pic_npwp": "012345678901234",
         "pic_no_hp": "08111111111",
         "pic_email": "andi@example.com",
         "pendamping_nama_1": "Rina Pendamping",

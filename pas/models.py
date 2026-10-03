@@ -112,6 +112,7 @@ class Pengajuan(models.Model):
     pic_nama = models.CharField("Nama PIC", max_length=255, blank=True)
     pic_jabatan = models.CharField("Jabatan PIC", max_length=100, blank=True)
     pic_nomor_identitas = models.CharField("Nomor Identitas PIC", max_length=50, blank=True)
+    pic_npwp = models.CharField("NPWP PIC", max_length=50, blank=True)
     pic_no_hp = models.CharField("No. HP PIC", max_length=20, blank=True)
     pic_email = models.EmailField("Email PIC", blank=True)
 

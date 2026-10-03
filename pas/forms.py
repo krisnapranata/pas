@@ -19,6 +19,7 @@ class PengajuanForm(forms.ModelForm):
             "pic_nama",
             "pic_jabatan",
             "pic_nomor_identitas",
+            "pic_npwp",
             "pic_no_hp",
             "pic_email",
             "keterangan",
@@ -42,6 +43,9 @@ class PengajuanForm(forms.ModelForm):
             "pic_nomor_identitas": forms.TextInput(
                 attrs={"class": "form-control", "inputmode": "numeric"}
             ),
+            "pic_npwp": forms.TextInput(
+                attrs={"class": "form-control", "inputmode": "numeric"}
+            ),
             "pic_no_hp": forms.TextInput(attrs={"class": "form-control"}),
             "pic_email": forms.EmailInput(attrs={"class": "form-control"}),
             "keterangan": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
@@ -57,6 +61,7 @@ class PengajuanForm(forms.ModelForm):
         self.fields["jumlah_pendamping"].initial = 0
         self.fields["jumlah_tamu"].initial = 0
         self.fields["pic_nama"].required = True
+        self.fields["pic_npwp"].required = True
         self.fields["pic_no_hp"].required = True
         self.fields["tanggal_pelaksanaan"].widget.attrs["min"] = timezone.localdate().isoformat()
         self.fields["pic_email"].required = False

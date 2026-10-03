@@ -19,6 +19,7 @@
                 <tr><th style="width:200px">Nama PIC</th><td>{{ pengajuan.pic_nama|default:"-" }}</td></tr>
                 <tr><th>Jabatan</th><td>{{ pengajuan.pic_jabatan|default:"-" }}</td></tr>
                 <tr><th>NIK / Nomor Identitas</th><td>{{ pengajuan.pic_nomor_identitas|default:"-" }}</td></tr>
+                <tr><th>NPWP</th><td>{{ pengajuan.pic_npwp|default:"-" }}</td></tr>
                 <tr><th>No. HP</th><td>{{ pengajuan.pic_no_hp|default:"-" }}</td></tr>
                 <tr><th>Layanan</th><td>{{ pengajuan.layanan.nama_layanan }} ({{ pengajuan.layanan.get_lokasi_display }})</td></tr>
                 <tr><th>Tanggal</th><td>{{ pengajuan.tanggal_pelaksanaan|date:"d M Y" }}</td></tr>
