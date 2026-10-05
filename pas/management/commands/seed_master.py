@@ -67,11 +67,11 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         for item in LAYANAN_MASTER:
-            _, created = Layanan.objects.update_or_create(
+            _, created = Layanan.objects.get_or_create(
                 kode_layanan=item["kode_layanan"], defaults=item
             )
             self.stdout.write(
-                f"  {'Dibuat' if created else 'Diperbarui'} layanan {item['kode_layanan']}"
+                f"  {'Dibuat' if created else 'Sudah ada (tidak diubah)'} layanan {item['kode_layanan']}"
             )
 
         daftar_hitam = [
@@ -89,13 +89,13 @@ class Command(BaseCommand):
             },
         ]
         for item in daftar_hitam:
-            _, c = DaftarHitam.objects.update_or_create(
+            _, c = DaftarHitam.objects.get_or_create(
                 tipe=item["tipe"],
                 nama=item["nama"],
                 defaults={"nik": item["nik"], "alasan": item["alasan"], "aktif": True},
             )
             self.stdout.write(
-                f"  {'Dibuat' if c else 'Diperbarui'} DaftarHitam [{item['tipe']}] {item['nama']}"
+                f"  {'Dibuat' if c else 'Sudah ada (tidak diubah)'} DaftarHitam [{item['tipe']}] {item['nama']}"
             )
 
         self.stdout.write(self.style.SUCCESS("Seed master data selesai."))
