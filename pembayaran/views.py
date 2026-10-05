@@ -328,9 +328,11 @@ def verifikasi_manual(request, pk):
         PaymentTransaction.objects.select_related("invoice", "manual", "payment_method"), pk=pk
     )
     if request.method == "POST":
-        keputusan = request.POST.get("keputusan")  # VALID / INVALID
+        keputusan = request.POST.get("keputusan")  # VALID / INVALID / BATAL
         if keputusan == "VALID":
             return tandai_lunas(request, transaksi)
+        elif keputusan == "BATAL":
+            return batalkan_lunas(request, transaksi)
         elif keputusan == "INVALID":
             from pas.services import set_status
 
@@ -360,7 +362,7 @@ def verifikasi_manual(request, pk):
 def tandai_lunas(request, transaksi):
     """Tandai transaksi PAID (dari verifikasi petugas). Mengembalikan response."""
     if transaksi.status == "PAID":
-        return redirect("pembayaran:verifikasi_manual", pk=transaksi.pk)
+        return redirect("pembayaran:dashboard_pembayaran")
     from pas.services import set_status
 
     transaksi.status = PaymentTransaction.Status.PAID
@@ -393,6 +395,38 @@ def tandai_lunas(request, transaksi):
         url=f"/pas/lacak/{pengajuan.pk}/",
     )
     messages.success(request, "Pembayaran diverifikasi lunas dan diteruskan ke Operasi.")
+    return redirect("pembayaran:dashboard_pembayaran")
+
+
+def batalkan_lunas(request, transaksi):
+    """Batalkan penandaan lunas. Status transaksi kembali PENDING & invoice
+    menjadi belum dibayar, sehingga bisa divalidasi ulang bila terjadi
+    kesalahan."""
+    if transaksi.status != PaymentTransaction.Status.PAID:
+        messages.info(request, "Transaksi ini belum berstatus lunas.")
+        return redirect("pembayaran:verifikasi_manual", pk=transaksi.pk)
+    from pas.services import set_status
+
+    transaksi.status = PaymentTransaction.Status.PENDING
+    transaksi.paid_at = None
+    transaksi.save(update_fields=["status", "paid_at"])
+    if hasattr(transaksi, "manual") and transaksi.manual:
+        transaksi.manual.verified_by = None
+        transaksi.manual.verified_at = None
+        transaksi.manual.save(update_fields=["verified_by", "verified_at"])
+    invoice = transaksi.invoice
+    invoice.status = Invoice.Status.UNPAID
+    invoice.save(update_fields=["status", "updated_at"])
+    pengajuan = invoice.pengajuan
+    if pengajuan.status == Pengajuan.Status.MENUNGGU_OPERASI:
+        set_status(
+            pengajuan,
+            Pengajuan.Status.BUKTI_TERUNGGAH,
+            request.user,
+            catatan="Validasi lunas dibatalkan; perlu divalidasi ulang.",
+        )
+    log_action(request, "BATALKAN_LUNAS", "PaymentTransaction", transaksi.pk)
+    messages.warning(request, "Validasi lunas dibatalkan. Transaksi kembali menunggu verifikasi.")
     return redirect("pembayaran:verifikasi_manual", pk=transaksi.pk)
 
 

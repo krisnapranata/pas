@@ -45,6 +45,13 @@
                     <button type="submit" name="keputusan" value="VALID" class="btn btn-success">Valid / Lunas</button>
                     <button type="submit" name="keputusan" value="INVALID" class="btn btn-danger">Tidak Valid</button>
                 </form>
+                {% if transaksi.status == 'PAID' %}
+                <form method="post" class="mt-2">
+                    {% csrf_token %}
+                    <p class="small text-muted mb-2">Validasi tercatat <strong>Lunas</strong>. Jika ini keliru, batalkan agar bisa divalidasi ulang.</p>
+                    <button type="submit" name="keputusan" value="BATAL" class="btn btn-outline-danger">Bukan Lunas / Koreksi</button>
+                </form>
+                {% endif %}
             </div>
         </div>
     </div>

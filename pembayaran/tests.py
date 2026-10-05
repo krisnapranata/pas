@@ -633,6 +633,38 @@ class StatusBuktiTerunggahTests(TestCase):
         self.pengajuan.refresh_from_db()
         self.assertEqual(self.pengajuan.status, Pengajuan.Status.MENUNGGU_OPERASI)
 
+    def test_valid_lunas_redirect_ke_dashboard_pembayaran(self):
+        self._unggah()
+        self.client.force_login(self.komersil)
+        resp = self.client.post(
+            reverse("pembayaran:verifikasi_manual", args=[self.transaksi.pk]),
+            {"keputusan": "VALID"},
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp.url, reverse("pembayaran:dashboard_pembayaran"))
+
+    def test_batalkan_lunas_mengembalikan_status(self):
+        self._unggah()
+        self.client.force_login(self.komersil)
+        self.client.post(
+            reverse("pembayaran:verifikasi_manual", args=[self.transaksi.pk]),
+            {"keputusan": "VALID"},
+        )
+        self.pengajuan.refresh_from_db()
+        self.assertEqual(self.pengajuan.status, Pengajuan.Status.MENUNGGU_OPERASI)
+        resp = self.client.post(
+            reverse("pembayaran:verifikasi_manual", args=[self.transaksi.pk]),
+            {"keputusan": "BATAL"},
+        )
+        self.assertRedirects(resp, reverse("pembayaran:verifikasi_manual", args=[self.transaksi.pk]))
+        transaksi = PaymentTransaction.objects.get(invoice=self.invoice)
+        self.assertEqual(transaksi.status, PaymentTransaction.Status.PENDING)
+        self.assertIsNone(transaksi.paid_at)
+        self.pengajuan.refresh_from_db()
+        self.assertEqual(self.pengajuan.status, Pengajuan.Status.BUKTI_TERUNGGAH)
+        self.invoice.refresh_from_db()
+        self.assertEqual(self.invoice.status, Invoice.Status.UNPAID)
+
     def test_menu_bayar_masih_bisa_dibuka_setelah_status_baru(self):
         self._unggah()
         self.client.force_login(self.pemohon)
