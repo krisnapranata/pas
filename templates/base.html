@@ -26,52 +26,53 @@
             <div class="collapse navbar-collapse" id="nav">
                 <ul class="navbar-nav me-auto">
                     {% if user.is_authenticated %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a></li>
                     {% if user.role == 'PEMOHON' and not user.is_staff %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:daftar_pengajuan' %}">Pemohon</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'accounts:profil' %}">Profil Saya</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:buat_pengajuan' %}">Buat Pengajuan</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'pembayaran:invoice_saya' %}">Pembayaran</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:daftar_pengajuan' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6a1 1 0 0 1 1 1v2H8V5a1 1 0 0 1 1-1z"/><path d="M8 4H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-2"/><path d="m9 14 2 2 4-4"/></svg>Pemohon</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'accounts:profil' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg>Profil Saya</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:buat_pengajuan' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Buat Pengajuan</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pembayaran:invoice_saya' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Pembayaran</a></li>
                     {% elif user.role == 'KOMERSIL' or user.is_staff %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:layanan_list' %}">Layanan</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:verifikasi_list' %}">Verifikasi</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:daftar_pengajuan' %}">Semua Pengajuan</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'pembayaran:dashboard_pembayaran' %}">Pembayaran</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'pembayaran:jenis_list' %}">Jenis Pembayaran</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'accounts:user_tim' %}">Kelola User</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:layanan_list' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg>Layanan</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:verifikasi_list' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>Verifikasi</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:daftar_pengajuan' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Semua Pengajuan</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pembayaran:dashboard_pembayaran' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Pembayaran</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pembayaran:jenis_list' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H2v10l9.3 9.3a1 1 0 0 0 1.4 0l8.6-8.6a1 1 0 0 0 0-1.4L12 2z"/><circle cx="7" cy="7" r="1.5"/></svg>Jenis Pembayaran</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'accounts:user_tim' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Kelola User</a></li>
                     {% endif %}
                     {% if user.role == 'OPERASI' or user.is_staff %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:operasi_list' %}">Operasi</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:hitam_list' %}">Daftar Hitam</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'accounts:user_tim' %}">Kelola User</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:operasi_list' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Operasi</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:hitam_list' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>Daftar Hitam</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'accounts:user_tim' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Kelola User</a></li>
                     {% endif %}
                     {% if user.role == 'AOCH' or user.is_staff %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:aoch_list' %}">AOCH</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'accounts:user_tim' %}">Kelola User</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:aoch_list' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7v6c0 5 3.5 8 10 9 6.5-1 10-4 10-9V7l-10-5z"/><path d="m9 12 2 2 4-4"/></svg>AOCH</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'accounts:user_tim' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Kelola User</a></li>
                     {% endif %}
                     {% if user.role == 'AVSEC' or user.is_staff %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:verifikasi_pas' %}">Verifikasi PAS</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:verifikasi_pas' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="m9 12 2 2 4-4"/></svg>Verifikasi PAS</a></li>
                     {% endif %}
                     {% if user.is_staff or user.role == 'KOMERSIL' or user.role == 'OPERASI' or user.role == 'AOCH' or user.role == 'AVSEC' or user.role == 'ADMINISTRATOR' %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:verifikasi_pas' %}">Verifikasi PAS</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:verifikasi_pas' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="m9 12 2 2 4-4"/></svg>Verifikasi PAS</a></li>
                     {% endif %}
                     {% if user.is_staff or user.role == 'ADMINISTRATOR' or user.role == 'KOMERSIL' or user.role == 'OPERASI' or user.role == 'AOCH' or user.role == 'AVSEC' %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:statistik' %}">Statistik</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:laporan' %}">Laporan</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:statistik' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10M18 20V4M6 20v-6"/></svg>Statistik</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:laporan' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>Laporan</a></li>
                     {% endif %}
                     {% if user.is_staff or user.role == 'ADMINISTRATOR' %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'audit:daftar' %}">Audit Log</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'audit:daftar' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6a1 1 0 0 1 1 1v2H8V5a1 1 0 0 1 1-1z"/><path d="M8 4H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-2"/><path d="M9 12h6M9 16h6"/></svg>Audit Log</a></li>
                     {% endif %}
                     {% else %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:buat_pengajuan' %}">Pemohon</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:verifikasi_pas' %}">Verifikasi PAS</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:lacak_pengajuan' %}">Lacak Pengajuan</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'pembayaran:cari_bukti' %}">Upload Bukti</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:buat_pengajuan' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6a1 1 0 0 1 1 1v2H8V5a1 1 0 0 1 1-1z"/><path d="M8 4H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-2"/><path d="m9 14 2 2 4-4"/></svg>Pemohon</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:verifikasi_pas' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="m9 12 2 2 4-4"/></svg>Verifikasi PAS</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:lacak_pengajuan' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Lacak Pengajuan</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pembayaran:cari_bukti' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>Upload Bukti</a></li>
                     {% endif %}
                 </ul>
 
                 {% if user.is_authenticated %}
                 <a class="btn btn-sm btn-outline-secondary me-2 position-relative" href="{% url 'notifikasi:daftar' %}">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg>
                     Notifikasi
                     {% if unread_count %}
                     <span class="position-absolute top-0 start-100 translate-middle badge bg-danger">{{ unread_count }}</span>
@@ -86,7 +87,7 @@
                     <button class="btn btn-outline-secondary btn-sm" type="submit">Keluar</button>
                 </form>
                 {% else %}
-                <a class="btn btn-sm btn-primary" href="{% url 'accounts:login' %}">Masuk Petugas</a>
+                <a class="btn btn-sm btn-primary" href="{% url 'accounts:login' %}">Login</a>
                 {% endif %}
             </div>
         </div>
