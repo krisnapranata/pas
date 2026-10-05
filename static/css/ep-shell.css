@@ -97,7 +97,8 @@ body { margin: 0; }
 }
 .ep-guest-brand .brand-logo { width: 28px; height: 28px; fill: var(--blue, #0052cc); }
 /* ---------- GUEST nav: Ala tab HP (ikon di atas, label di bawah) ---------- */
-.ep-guest-nav { display: flex; align-items: flex-end; justify-content: flex-end; gap: 4px; flex-wrap: wrap; }
+.ep-guest-nav { display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
+.ep-guest-nav .btn { align-self: center; }
 .ep-guest-item {
   display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 4px; min-width: 60px; padding: 8px 8px; border-radius: 12px;
