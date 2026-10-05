@@ -36,8 +36,8 @@
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
                     {% if user.role == 'PEMOHON' and not user.is_staff %}
+                    <li class="nav-item"><a class="nav-link active" href="{% url 'pas:daftar_pengajuan' %}">Pemohon</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'accounts:profil' %}">Profil Saya</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:daftar_pengajuan' %}">Pengajuan</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'pas:buat_pengajuan' %}">Buat Pengajuan</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'pembayaran:invoice_saya' %}">Pembayaran</a></li>
                     {% elif user.role == 'KOMERSIL' or user.is_staff %}
