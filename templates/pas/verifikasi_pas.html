@@ -33,7 +33,7 @@
                     </div>
                     {% else %}
                     {% with p=hasil.pengajuan s=hasil.serah %}
-                    <div class="alert alert-{% if p.status_masa_berlaku == 'KEDALUWARSA' %}danger{% elif p.status_masa_berlaku == 'BELUM' %}secondary{% elif p.status_masa_berlaku == 'AKTIF' %}success{% else %}info{% endif %} mb-3">
+                    <div class="alert alert-{% if p.status_masa_berlaku == 'KEDALUWARSA' %}danger{% elif p.status_masa_berlaku == 'BELUM' %}secondary{% elif p.status_masa_berlaku == 'AKTIF' %}success{% elif p.status_masa_berlaku == 'SELESAI' %}secondary{% else %}info{% endif %} mb-3">
                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                             <div>
                                 <div class="fw-bold fs-5 mb-0">
@@ -43,6 +43,8 @@
                                     AKTIF
                                     {% elif p.status_masa_berlaku == 'TERJADWAL' %}
                                     TERJADWAL
+                                    {% elif p.status_masa_berlaku == 'SELESAI' %}
+                                    PAS SELESAI — KEMBALI
                                     {% else %}
                                     BELUM DITERBITKAN
                                     {% endif %}
@@ -90,9 +92,10 @@
                         PAS visitor ini sudah lewat masa berlaku dan <strong>tidak sah untuk
                         digunakan kembali</strong> (termasuk esok hari).
                     </div>
-                    {% elif p.status_masa_berlaku == 'AKTIF' and s and s.status == 'DIKEMBALIKAN' %}
+                    {% elif p.status_masa_berlaku == 'SELESAI' %}
                     <div class="alert alert-warning small mb-0">
-                        PAS sudah dikembalikan pemohon — tidak boleh dipakai lagi.
+                        PAS sudah dikembalikan pemohon dan pengajuan selesai —
+                        <strong>tidak boleh dipakai lagi</strong>.
                     </div>
                     {% endif %}
                     {% endwith %}

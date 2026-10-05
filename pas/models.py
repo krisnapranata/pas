@@ -168,7 +168,15 @@ class Pengajuan(models.Model):
 
     @property
     def status_masa_berlaku(self):
-        """AKTIF / KEDALUWARSA / TERJADWAL / BELUM — untuk menu verifikasi & notifikasi."""
+        """AKTIF / KEDALUWARSA / TERJADWAL / BELUM / SELESAI — untuk menu verifikasi & notifikasi."""
+        if self.status == self.Status.SELESAI:
+            return "SELESAI"
+        try:
+            serah = self.serah_terima
+            if serah and serah.status == "DIKEMBALIKAN":
+                return "SELESAI"
+        except Exception:
+            serah = None
         if not self.tanggal_berlaku_pas:
             return "BELUM"
         today = timezone.localdate()
