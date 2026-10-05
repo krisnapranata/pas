@@ -44,12 +44,17 @@ SECURE_HSTS_PRELOAD = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 
-# CSRF host yang dipercaya (opsional, pisahkan koma)
-CSRF_TRUSTED_ORIGINS = [
+# CSRF host yang dipercaya (opsional, pisahkan koma).
+# Bila tidak diisi, otomatis diturunkan dari ALLOWED_HOSTS (skema https),
+# agar POST (kirim pengajuan, simpan nomor PAS, dsb.) tidak ditolak 403.
+_csrf_origins = [
     o.strip()
     for o in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
     if o.strip()
 ]
+if not _csrf_origins:
+    _csrf_origins = [f"https://{h}" for h in ALLOWED_HOSTS if h and h != "*"]
+CSRF_TRUSTED_ORIGINS = _csrf_origins
 
 # Email production lewat SMTP
 if os.getenv("EMAIL_HOST"):
