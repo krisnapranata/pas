@@ -96,12 +96,17 @@ body { margin: 0; }
   color: var(--navy, #0a2540); font-weight: 800; font-size: 1.1rem;
 }
 .ep-guest-brand .brand-logo { width: 28px; height: 28px; fill: var(--blue, #0052cc); }
-.ep-guest-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.ep-guest-link {
-  color: var(--ink, #12263a); text-decoration: none; font-weight: 600;
-  padding: 6px 10px; border-radius: 10px; font-size: .9rem;
+/* ---------- GUEST nav: Ala tab HP (ikon di atas, label di bawah) ---------- */
+.ep-guest-nav { display: flex; align-items: flex-end; justify-content: flex-end; gap: 4px; flex-wrap: wrap; }
+.ep-guest-item {
+  display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; min-width: 60px; padding: 8px 8px; border-radius: 12px;
+  text-decoration: none; color: var(--ink, #12263a); font-size: .68rem; font-weight: 700; line-height: 1;
+  background: var(--bg-alt, #f4f8fc);
+  transition: background .15s, color .15s;
 }
-.ep-guest-link:hover { background: var(--bg-alt, #f4f8fc); color: var(--blue, #0052cc); }
+.ep-guest-item svg { width: 20px; height: 20px; }
+.ep-guest-item:hover { background: rgba(0,82,204,.12); color: var(--blue, #0052cc); }
 
 /* ---------- Mobile: sidebar jadi bottom bar (Traveloka style) ---------- */
 @media (max-width: 900px) {
