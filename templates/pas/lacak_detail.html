@@ -17,7 +17,7 @@
 {% endif %}
 
 {% if pengajuan.status == 'PAS_TERBIT' %}
-<div class="alert alert-success"><strong>PAS telah diterbitkan.</strong> Silakan ambil kartu PAS Anda di Operasi.</div>
+<div class="alert alert-success"><strong>PAS sudah diterbitkan.</strong> Silakan ambil kartu PAS Anda di Petugas AOCH.</div>
 {% elif pengajuan.status == 'MENUNGGU_PEMBAYARAN' or pengajuan.status == 'BUKTI_TERUNGGAH' %}
     {% if menunggu_verifikasi %}
     <div class="alert alert-info">Bukti pembayaran sudah diunggah — <strong>menunggu verifikasi petugas Komersil</strong>.</div>

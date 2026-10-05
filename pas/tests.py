@@ -581,6 +581,26 @@ class AochSerahTerimaTests(TestCase):
         self.assertFalse(serah.foto_penyerahan)
         self.assertEqual(self.pengajuan.status, Pengajuan.Status.PAS_TERBIT)
 
+    def test_tidak_bisa_serahkan_sebelum_tanggal_pelaksanaan(self):
+        from django.utils import timezone
+
+        self.pengajuan.tanggal_pelaksanaan = timezone.localdate() + timezone.timedelta(days=3)
+        self.pengajuan.save(update_fields=["tanggal_pelaksanaan"])
+        ttd = "data:image/png;base64," + base64.b64encode(_png_bytes()).decode()
+        self.client.post(
+            reverse("pas:aoch_proses", args=[self.pengajuan.pk]),
+            {
+                "aksi": "serahkan",
+                "penerima_nama": "Andi PIC",
+                "foto": SimpleUploadedFile("foto.jpg", _png_bytes()),
+                "ttd_data": ttd,
+            },
+        )
+        serah = SerahTerimaPAS.objects.get(pengajuan=self.pengajuan)
+        self.assertEqual(serah.status, SerahTerimaPAS.Status.BELUM)
+        self.assertFalse(serah.foto_penyerahan)
+        self.assertEqual(self.pengajuan.status, Pengajuan.Status.PAS_TERBIT)
+
     def test_serahkan_pas_dengan_foto_dan_ttd(self):
         ttd = "data:image/png;base64," + base64.b64encode(_png_bytes()).decode()
         self.client.post(

@@ -1054,6 +1054,13 @@ def aoch_proses(request, pk):
 
         # ---------- Serahkan fisik PAS ----------
         if aksi == "serahkan":
+            if timezone.localdate() < pengajuan.tanggal_pelaksanaan:
+                messages.error(
+                    request,
+                    f"PAS belum bisa diserahkan sebelum tanggal pelaksanaan "
+                    f"({pengajuan.tanggal_pelaksanaan:%d-%m-%Y}).",
+                )
+                return redirect("pas:aoch_proses", pk=pk)
             belum = [pd.nama for pd in pendamping if not pd.nomor_pas]
             if belum:
                 messages.error(
@@ -1166,6 +1173,7 @@ def aoch_proses(request, pk):
             "pengajuan": pengajuan,
             "pendamping": pendamping,
             "serah": serah,
+            "boleh_serah": timezone.localdate() >= pengajuan.tanggal_pelaksanaan,
         },
     )
 
