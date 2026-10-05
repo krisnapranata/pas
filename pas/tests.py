@@ -76,7 +76,7 @@ class PengajuanBaruTests(TestCase):
         resp = self.client.get(self.url)
         self.assertEqual(resp.status_code, 200)
         self.assertTemplateUsed(resp, "pas/batasan_area.html")
-        self.assertContains(resp, "Batasan Area PAS Visitor")
+        self.assertContains(resp, "Batasan Area Layanan")
         self.assertContains(resp, "Departure")
         self.assertContains(resp, "Arrival")
 
