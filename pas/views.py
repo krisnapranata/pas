@@ -1041,6 +1041,8 @@ def aoch_proses(request, pk):
                 bentrok = (
                     DokumenPendamping.objects.filter(nomor_pas__iexact=nomor)
                     .exclude(pk=pd.pk)
+                    .exclude(pengajuan__status__in=["SELESAI", "DIBATALKAN"])
+                    .exclude(pengajuan__serah_terima__status="DIKEMBALIKAN")
                     .exists()
                 )
                 if bentrok:

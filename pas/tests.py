@@ -667,6 +667,73 @@ class AochSerahTerimaTests(TestCase):
         self.assertEqual(resp.status_code, 302)
         self.assertFalse(SerahTerimaPAS.objects.filter(pengajuan=self.pengajuan).exists())
 
+    def test_nomor_pas_boleh_dipakai_lagi_setelah_kembali_selesai(self):
+        """Nomor PAS yang kartunya sudah dikembalikan & pengajuan SELESAI
+        boleh dipakai lagi oleh pengajuan lain."""
+        from django.utils import timezone
+
+        # pengajuan lama selesai & sudah dikembalikan
+        SerahTerimaPAS.objects.create(
+            pengajuan=self.pengajuan, status=SerahTerimaPAS.Status.DIKEMBALIKAN
+        )
+        self.pengajuan.status = Pengajuan.Status.SELESAI
+        self.pengajuan.save(update_fields=["status", "updated_at"])
+        self.pd.refresh_from_db()
+        self.assertEqual(self.pd.nomor_pas, "PAS-001")
+
+        # pengajuan baru dari orang lain, tanggal sama
+        today = timezone.localdate()
+        p2 = Pengajuan.objects.create(
+            layanan=self.layanan,
+            nomor_pengajuan="REQ-20261006-0099",
+            status=Pengajuan.Status.PAS_TERBIT,
+            tanggal_pelaksanaan=today,
+            tanggal_berlaku_pas=today,
+            jumlah_pendamping=1,
+            pemohon_nama="Andi",
+            pic_nama="Andi",
+            pic_no_hp="0811",
+            pic_nomor_identitas="3175000000000099",
+        )
+        pd2 = DokumenPendamping.objects.create(
+            pengajuan=p2, urutan=1, nama="Rina", nik="3175000000000088",
+            file="pengajuan/pendamping/x.jpg",
+        )
+        self.client.force_login(self.user)
+        self.client.post(
+            reverse("pas:aoch_proses", args=[p2.pk]),
+            {"aksi": "simpan_nomor", f"nomor_pas_{pd2.pk}": "PAS-001"},
+        )
+        pd2.refresh_from_db()
+        self.assertEqual(pd2.nomor_pas, "PAS-001")
+
+    def test_nomor_pas_masih_dilarang_untuk_yang_belum_selesai(self):
+        """Nomor dari pendamping pada pengajuan yang masih berjalan
+        tetap dilarang dipakai pengajuan lain."""
+        p2 = Pengajuan.objects.create(
+            layanan=self.layanan,
+            nomor_pengajuan="REQ-20261006-0098",
+            status=Pengajuan.Status.PAS_TERBIT,
+            tanggal_pelaksanaan=self.pengajuan.tanggal_pelaksanaan,
+            jumlah_pendamping=1,
+            pemohon_nama="Andi",
+            pic_nama="Andi",
+            pic_no_hp="0811",
+            pic_nomor_identitas="3175000000000099",
+        )
+        pd2 = DokumenPendamping.objects.create(
+            pengajuan=p2, urutan=1, nama="Rina", nik="3175000000000088",
+            file="pengajuan/pendamping/x.jpg",
+        )
+        # self.pengjuandiant  masih PAS_TERBIT (aktif)
+        self.client.force_login(self.user)
+        self.client.post(
+            reverse("pas:aoch_proses", args=[p2.pk]),
+            {"aksi": "simpan_nomor", f"nomor_pas_{pd2.pk}": "PAS-001"},
+        )
+        pd2.refresh_from_db()
+        self.assertEqual(pd2.nomor_pas, "")
+
 
 class VerifikasiPasTests(TestCase):
     def setUp(self):
