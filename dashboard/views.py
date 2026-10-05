@@ -98,6 +98,11 @@ def _home_aoch(request):
         "belum_acknowledged": Pengajuan.objects.filter(status="DIBAYAR").count(),
         "acknowledged": Pengajuan.objects.filter(status="ACKNOWLEDGED_AOCH").count(),
         "pas_terbit": Pengajuan.objects.filter(status="PAS_TERBIT").count(),
+        "diserahkan": Pengajuan.objects.filter(status="DILAKSANAKAN").count(),
+        "dikembalikan": SerahTerimaPAS.objects.filter(
+            status=SerahTerimaPAS.Status.DIKEMBALIKAN
+        ).count(),
+        "selesai": Pengajuan.objects.filter(status="SELESAI").count(),
         "pengajuan": Pengajuan.objects.filter(
             status__in=[
                 "DIBAYAR",
@@ -116,22 +121,12 @@ def _home_aoch(request):
 
 
 def _home_avsec(request):
-    konteks = {
-        "menunggu_serah": Pengajuan.objects.filter(status="PAS_TERBIT").count(),
-        "diserahkan": Pengajuan.objects.filter(status="DILAKSANAKAN").count(),
-        "dikembalikan": SerahTerimaPAS.objects.filter(
-            status=SerahTerimaPAS.Status.DIKEMBALIKAN
-        ).count(),
-        "selesai": Pengajuan.objects.filter(status="SELESAI").count(),
-        "pengajuan": Pengajuan.objects.filter(
-            status__in=["PAS_TERBIT", "DILAKSANAKAN", "SELESAI"]
-        )
-        .select_related("layanan", "pemohon")
-        .prefetch_related("pendamping", "serah_terima")
-        .order_by("-created_at")[:10],
-        "masa_berlaku": ringkasan_masa_berlaku(),
-    }
-    return render(request, "dashboard/home_avsec.html", konteks)
+    """AVSEC hanya melakukan verifikasi PAS di dashboard awal."""
+    return render(
+        request,
+        "dashboard/home_avsec.html",
+        {"masa_berlaku": ringkasan_masa_berlaku()},
+    )
 
 
 def _home_admin(request):

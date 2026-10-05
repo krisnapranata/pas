@@ -36,11 +36,8 @@ urlpatterns = [
     path("daftar-hitam/buat/", views.hitam_form, name="hitam_buat"),
     path("daftar-hitam/<int:pk>/edit/", views.hitam_form, name="hitam_edit"),
     path("daftar-hitam/<int:pk>/hapus/", views.hitam_hapus, name="hitam_hapus"),
-    # AOCH
+    # AOCH (input nomor PAS + serah terima fisik PAS)
     path("aoch/", views.aoch_list, name="aoch_list"),
     path("aoch/<int:pk>/proses/", views.aoch_proses, name="aoch_proses"),
     path("aoch/<int:pk>/ack/", views.aoch_acknowledge, name="aoch_acknowledge"),
-    # Avsec (serah terima fisik PAS)
-    path("avsec/", views.avsec_list, name="avsec_list"),
-    path("avsec/<int:pk>/proses/", views.avsec_serah_terima, name="avsec_serah_terima"),
 ]

@@ -120,11 +120,9 @@
         {% elif pengajuan.status == 'PAS_TERBIT' or pengajuan.status == 'DILAKSANAKAN' %}
         <div class="alert alert-success">
             PAS telah diterbitkan dan berlaku pada <strong>{{ pengajuan.tanggal_berlaku_pas|date:"d M Y" }}</strong>
-            (satu hari). AOCH menginput nomor PAS visitor, petugas Avsec mencatat
+            (satu hari). AOCH menginput nomor PAS visitor serta mencatat
             penyerahan &amp; pengembalian fisiknya.
             <a href="{% url 'pas:aoch_proses' pengajuan.pk %}">Halaman AOCH</a>
-            ·
-            <a href="{% url 'pas:avsec_serah_terima' pengajuan.pk %}">Halaman Serah Terima Avsec</a>
         </div>
         {% elif pengajuan.status == 'SELESAI' %}
         <div class="alert alert-success">Pengajuan selesai — PAS telah dikembalikan pemohon.</div>

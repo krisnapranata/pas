@@ -4,59 +4,15 @@
 
 {% block content %}
 <h4 class="mb-1">Dashboard Avsec</h4>
-<p class="text-muted">Penyerahan &amp; pengembalian fisik PAS visitor — berlaku satu hari.</p>
-
-<div class="row g-3">
-    <div class="col-6 col-md-3">
-        <div class="card card-stat text-bg-primary"><div class="card-body"><div class="small">Menunggu Serah Terima</div><div class="display-6">{{ menunggu_serah }}</div></div></div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="card card-stat text-bg-warning"><div class="card-body"><div class="small">Diserahkan</div><div class="display-6">{{ diserahkan }}</div></div></div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="card card-stat text-bg-info"><div class="card-body"><div class="small">Dikembalikan</div><div class="display-6">{{ dikembalikan }}</div></div></div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="card card-stat text-bg-success"><div class="card-body"><div class="small">Selesai</div><div class="display-6">{{ selesai }}</div></div></div>
-    </div>
-</div>
+<p class="text-muted">Verifikasi keabsahan PAS visitor — cek status Aktif / Kedaluwarsa.</p>
 
 <div class="card shadow-sm mt-3">
-    <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-            <h6 class="mb-0">PAS di Lapangan</h6>
-            <a href="{% url 'pas:avsec_list' %}" class="btn btn-sm btn-outline-primary">Semua Serah Terima</a>
-        </div>
-        <div class="table-responsive">
-            <table class="table table-sm">
-                <thead><tr><th>Nomor</th><th>Pemohon / PIC</th><th>Layanan</th><th>Area</th><th>Pelaksanaan</th><th>Nomor PAS</th><th>Status Serah Terima</th><th></th></tr></thead>
-                <tbody>
-                    {% for p in pengajuan %}
-                    <tr>
-                        <td>{{ p.nomor_pengajuan }}</td>
-                        <td>{{ p.nama_pemohon }}<div class="small text-muted">{{ p.pic_nama }}</div></td>
-                        <td>{{ p.layanan.nama_layanan }}{% if p.tujuan %}<div class="small text-muted">Tujuan: {{ p.tujuan }}</div>{% endif %}</td>
-                        <td>{{ p.layanan.get_lokasi_display }}</td>
-                        <td>{{ p.tanggal_pelaksanaan|date:"d-m-Y" }}</td>
-                        <td>
-                            {% for pd in p.pendamping.all %}<div class="small font-monospace">{{ pd.nomor_pas|default:"—" }}</div>{% empty %}-{% endfor %}
-                        </td>
-                        <td>
-                            <span class="badge text-bg-{% if p.serah_terima.status == 'DIKEMBALIKAN' %}success{% elif p.serah_terima.status == 'DITERIMA' %}primary{% else %}secondary{% endif %}">
-                                {{ p.serah_terima.get_status_display|default:"Belum Diserahkan" }}
-                            </span>
-                        </td>
-                        <td class="text-nowrap">
-                            <a href="{% url 'pas:avsec_serah_terima' p.pk %}" class="btn btn-sm btn-primary">Catat</a>
-                            <a href="{% url 'pas:detail_pengajuan' p.pk %}" class="btn btn-sm btn-outline-primary">Detail</a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="8" class="text-center text-muted py-3">Belum ada PAS diterbitkan.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+    <div class="card-body text-center py-5">
+        <p class="text-muted mb-3">
+            Masukkan nomor request atau nomor PAS visitor untuk melihat
+            status Aktif / Kedaluwarsa.
+        </p>
+        <a href="{% url 'pas:verifikasi_pas' %}" class="btn btn-primary btn-lg">Verifikasi PAS</a>
     </div>
 </div>
 

@@ -58,7 +58,7 @@
                     <li class="nav-item"><a class="nav-link" href="{% url 'accounts:user_tim' %}">Kelola User</a></li>
                     {% endif %}
                     {% if user.role == 'AVSEC' or user.is_staff %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:avsec_list' %}">Serah Terima</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:verifikasi_pas' %}">Verifikasi PAS</a></li>
                     {% endif %}
                     {% if user.is_staff or user.role == 'KOMERSIL' or user.role == 'OPERASI' or user.role == 'AOCH' or user.role == 'AVSEC' or user.role == 'ADMINISTRATOR' %}
                     <li class="nav-item"><a class="nav-link" href="{% url 'pas:verifikasi_pas' %}">Verifikasi PAS</a></li>

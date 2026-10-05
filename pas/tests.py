@@ -520,19 +520,6 @@ class AochProsesTests(TestCase):
         self.pd.refresh_from_db()
         self.assertEqual(self.pd.nomor_pas, "PAS-001")
 
-    def test_aoch_tidak_bisa_catat_serah_terima(self):
-        ttd = "data:image/png;base64," + base64.b64encode(_png_bytes()).decode()
-        self.client.post(
-            reverse("pas:aoch_proses", args=[self.pengajuan.pk]),
-            {
-                "aksi": "serahkan",
-                "penerima_nama": "Andi PIC",
-                "foto": SimpleUploadedFile("foto.jpg", _png_bytes()),
-                "ttd_data": ttd,
-            },
-        )
-        self.assertFalse(SerahTerimaPAS.objects.filter(pengajuan=self.pengajuan).exists())
-
     def test_avsec_tidak_bisa_akses_nomor_pas(self):
         avsec = User.objects.create_user(
             username="avsec-x", password="x", role="AVSEC"
@@ -547,10 +534,10 @@ class AochProsesTests(TestCase):
 
 
 @override_settings(MEDIA_ROOT=_MEDIA_SEMENTARA)
-class AvsecSerahTerimaTests(TestCase):
+class AochSerahTerimaTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
-            username="avsec1", password="x", role="AVSEC"
+            username="aoch1", password="x", role="AOCH"
         )
         self.client.force_login(self.user)
         self.layanan = Layanan.objects.create(
@@ -581,7 +568,7 @@ class AvsecSerahTerimaTests(TestCase):
         self.pd.save(update_fields=["nomor_pas"])
         ttd = "data:image/png;base64," + base64.b64encode(_png_bytes()).decode()
         self.client.post(
-            reverse("pas:avsec_serah_terima", args=[self.pengajuan.pk]),
+            reverse("pas:aoch_proses", args=[self.pengajuan.pk]),
             {
                 "aksi": "serahkan",
                 "penerima_nama": "Andi PIC",
@@ -597,7 +584,7 @@ class AvsecSerahTerimaTests(TestCase):
     def test_serahkan_pas_dengan_foto_dan_ttd(self):
         ttd = "data:image/png;base64," + base64.b64encode(_png_bytes()).decode()
         self.client.post(
-            reverse("pas:avsec_serah_terima", args=[self.pengajuan.pk]),
+            reverse("pas:aoch_proses", args=[self.pengajuan.pk]),
             {
                 "aksi": "serahkan",
                 "penerima_nama": "Andi PIC",
@@ -619,7 +606,7 @@ class AvsecSerahTerimaTests(TestCase):
     def test_pengembalian_dan_selesai(self):
         ttd = "data:image/png;base64," + base64.b64encode(_png_bytes()).decode()
         self.client.post(
-            reverse("pas:avsec_serah_terima", args=[self.pengajuan.pk]),
+            reverse("pas:aoch_proses", args=[self.pengajuan.pk]),
             {
                 "aksi": "serahkan",
                 "penerima_nama": "Andi PIC",
@@ -628,7 +615,7 @@ class AvsecSerahTerimaTests(TestCase):
             },
         )
         self.client.post(
-            reverse("pas:avsec_serah_terima", args=[self.pengajuan.pk]),
+            reverse("pas:aoch_proses", args=[self.pengajuan.pk]),
             {
                 "aksi": "kembalikan",
                 "foto": SimpleUploadedFile("foto-kembali.jpg", _png_bytes()),
@@ -645,17 +632,17 @@ class AvsecSerahTerimaTests(TestCase):
         self.assertTrue(self.pengajuan.serah_terima.ttd_pengembalian)
 
         self.client.post(
-            reverse("pas:avsec_serah_terima", args=[self.pengajuan.pk]),
+            reverse("pas:aoch_proses", args=[self.pengajuan.pk]),
             {"aksi": "selesai"},
         )
         self.pengajuan.refresh_from_db()
         self.assertEqual(self.pengajuan.status, Pengajuan.Status.SELESAI)
 
-    def test_aoch_tidak_bisa_akses_halaman_avsec(self):
-        aoch = User.objects.create_user(username="aoch-y", password="x", role="AOCH")
-        self.client.force_login(aoch)
+    def test_avsec_tidak_bisa_akses_serah_terima(self):
+        avsec = User.objects.create_user(username="avsec-y", password="x", role="AVSEC")
+        self.client.force_login(avsec)
         resp = self.client.get(
-            reverse("pas:avsec_serah_terima", args=[self.pengajuan.pk])
+            reverse("pas:aoch_proses", args=[self.pengajuan.pk])
         )
         self.assertEqual(resp.status_code, 302)
         self.assertFalse(SerahTerimaPAS.objects.filter(pengajuan=self.pengajuan).exists())
@@ -725,13 +712,12 @@ class VerifikasiPasTests(TestCase):
 @override_settings(MEDIA_ROOT=_MEDIA_SEMENTARA)
 class AlurLengkapSampaiSelesaiTests(TestCase):
     """Tombol di tahap akhir harus benar-benar memajukan status:
-    Komersil -> Operasi -> Terbitkan PAS -> AOCH nomor -> Avsec serah/kembali -> Selesai."""
+    Komersil -> Operasi -> Terbitkan PAS -> AOCH nomor -> AOCH serah/kembali -> Selesai."""
 
     def setUp(self):
         self.kom = User.objects.create_user(username="kom3", password="x", role="KOMERSIL")
         self.ops = User.objects.create_user(username="ops3", password="x", role="OPERASI")
         self.aoch = User.objects.create_user(username="aoch3", password="x", role="AOCH")
-        self.avsec = User.objects.create_user(username="avsec3", password="x", role="AVSEC")
         self.layanan = Layanan.objects.create(
             kode_layanan="W1", nama_layanan="LW", harga=1000, lokasi="ARRIVAL"
         )
@@ -803,11 +789,11 @@ class AlurLengkapSampaiSelesaiTests(TestCase):
         self.pd.refresh_from_db()
         self.assertEqual(self.pd.nomor_pas, "PAS-001")
 
-        # 4. Avsec mencatat penyerahan (foto + TTD)
+        # 4. AOCH mencatat penyerahan (foto + TTD)
         ttd = "data:image/png;base64," + base64.b64encode(_png_bytes()).decode()
-        self.client.force_login(self.avsec)
+        self.client.force_login(self.aoch)
         self.client.post(
-            reverse("pas:avsec_serah_terima", args=[self.pengajuan.pk]),
+            reverse("pas:aoch_proses", args=[self.pengajuan.pk]),
             {
                 "aksi": "serahkan",
                 "penerima_nama": "Andi PIC",
@@ -822,7 +808,7 @@ class AlurLengkapSampaiSelesaiTests(TestCase):
 
         # 5. Pengembalian fisik
         self.client.post(
-            reverse("pas:avsec_serah_terima", args=[self.pengajuan.pk]),
+            reverse("pas:aoch_proses", args=[self.pengajuan.pk]),
             {
                 "aksi": "kembalikan",
                 "foto": SimpleUploadedFile("foto-kembali.png", _png_bytes(), content_type="image/png"),
@@ -834,7 +820,7 @@ class AlurLengkapSampaiSelesaiTests(TestCase):
 
         # 6. Selesai
         self.client.post(
-            reverse("pas:avsec_serah_terima", args=[self.pengajuan.pk]),
+            reverse("pas:aoch_proses", args=[self.pengajuan.pk]),
             {"aksi": "selesai"},
         )
         self.pengajuan.refresh_from_db()

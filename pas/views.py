@@ -71,10 +71,6 @@ def _is_aoch(user):
     return _has_role(user, "AOCH")
 
 
-def _is_avsec(user):
-    return _has_role(user, "AVSEC")
-
-
 def _is_petugas(user):
     return _has_role(user, "KOMERSIL", "OPERASI", "AOCH", "AVSEC")
 
@@ -524,7 +520,6 @@ def detail_pengajuan(request, pk):
             "is_komersil": _is_komersil(request.user),
             "is_operasi": _is_operasi(request.user),
             "is_aoch": _is_aoch(request.user),
-            "is_avsec": _is_avsec(request.user),
             "is_petugas": _is_petugas(request.user),
         },
     )
@@ -875,23 +870,15 @@ def terbitkan_pas(request, pk):
             "PAS diterbitkan",
             f"PAS untuk pengajuan {pengajuan.nomor_pengajuan} telah diterbitkan dan "
             f"berlaku pada {pengajuan.tanggal_berlaku_pas:%d-%m-%Y} (satu hari). "
-            "Penyerahan fisiknya dicatat oleh petugas Avsec.",
+            "Penyerahan fisiknya dicatat oleh petugas AOCH.",
             url=f"/pas/lacak/{pk}/",
         )
         notify_role(
             "AOCH",
             "PAS diterbitkan — siap diserahkan",
             f"PAS untuk pengajuan {pengajuan.nomor_pengajuan} telah diterbitkan oleh "
-            "Operasi. Silakan input nomor PAS visitor bagi tiap pendamping.",
+            "Operasi. Silakan input nomor PAS visitor dan catat penyerahan fisiknya.",
             url=f"/pas/aoch/{pk}/proses/",
-            pengajuan=pengajuan,
-        )
-        notify_role(
-            "AVSEC",
-            "PAS diterbitkan — siap diserahkan",
-            f"PAS fisik untuk pengajuan {pengajuan.nomor_pengajuan} siap diserahkan "
-            "kepada pemohon. Catat penyerahan, foto & tanda tangan elektronik.",
-            url=f"/pas/avsec/{pk}/proses/",
             pengajuan=pengajuan,
         )
         notify_role(
@@ -914,8 +901,8 @@ def terbitkan_pas(request, pk):
         messages.success(
             request,
             f"PAS diterbitkan, berlaku {pengajuan.tanggal_berlaku_pas:%d-%m-%Y} "
-            "(satu hari). AOCH diinformasikan untuk input nomor PAS dan Avsec "
-            "untuk mencatat penyerahan.",
+            "(satu hari). AOCH diinformasikan untuk input nomor PAS dan mencatat "
+            "penyerahan fisik.",
         )
     return redirect("pas:operasi_proses", pk=pk)
 
@@ -997,97 +984,9 @@ def _simpan_foto(data_url):
 
 @login_required
 def aoch_proses(request, pk):
-    """AOCH: input nomor PAS visitor. Penyerahan fisik dicatat petugas Avsec."""
+    """AOCH: input nomor PAS visitor, lalu serahkan & terima kembali fisik PAS
+    (foto + tanda tangan elektronik)."""
     if not _is_aoch(request.user):
-        return redirect("dashboard:home")
-    pengajuan = get_object_or_404(
-        Pengajuan.objects.select_related("layanan", "pemohon"), pk=pk
-    )
-    pendamping = list(pengajuan.pendamping.all())
-    serah = SerahTerimaPAS.objects.filter(pengajuan=pengajuan).first()
-
-    if request.method == "POST" and request.POST.get("aksi") == "simpan_nomor":
-        if pengajuan.status not in (
-            Pengajuan.Status.PAS_TERBIT,
-            Pengajuan.Status.ACKNOWLEDGED_AOCH,
-            Pengajuan.Status.SIAP_DILAKSANAKAN,
-            Pengajuan.Status.DILAKSANAKAN,
-        ):
-            messages.error(
-                request,
-                "PAS belum diterbitkan oleh Operasi — nomor PAS belum bisa disimpan.",
-            )
-            return redirect("pas:aoch_proses", pk=pk)
-        kosong = []
-        dipakai = []
-        for pd in pendamping:
-            nomor = (request.POST.get(f"nomor_pas_{pd.pk}") or "").strip()
-            if not nomor:
-                kosong.append(pd.nama)
-                continue
-            bentrok = (
-                DokumenPendamping.objects.filter(nomor_pas__iexact=nomor)
-                .exclude(pk=pd.pk)
-                .exists()
-            )
-            if bentrok:
-                dipakai.append(f"{nomor} ({pd.nama})")
-        if kosong:
-            messages.error(
-                request,
-                "Nomor PAS wajib diisi untuk: " + ", ".join(kosong) + ".",
-            )
-        elif dipakai:
-            messages.error(
-                request,
-                "Nomor PAS sudah dipakai pada pendamping lain: "
-                + ", ".join(dipakai) + ".",
-            )
-        else:
-            for pd in pendamping:
-                nomor = (request.POST.get(f"nomor_pas_{pd.pk}") or "").strip()
-                if nomor and nomor != pd.nomor_pas:
-                    pd.nomor_pas = nomor
-                    pd.save(update_fields=["nomor_pas"])
-            log_action(request, "INPUT_NOMOR_PAS", "Pengajuan", pk)
-            messages.success(request, "Nomor PAS pendamping tersimpan.")
-        return redirect("pas:aoch_proses", pk=pk)
-
-    return render(
-        request,
-        "pas/aoch_proses.html",
-        {
-            "pengajuan": pengajuan,
-            "pendamping": pendamping,
-            "serah": serah,
-        },
-    )
-
-
-# ---------- Avsec (serah terima fisik PAS) ----------
-
-@login_required
-def avsec_list(request):
-    if not _is_avsec(request.user):
-        return redirect("dashboard:home")
-    query = (
-        Pengajuan.objects.filter(
-            status__in=[
-                Pengajuan.Status.PAS_TERBIT,
-                Pengajuan.Status.DILAKSANAKAN,
-                Pengajuan.Status.SELESAI,
-            ]
-        )
-        .select_related("layanan", "pemohon")
-        .prefetch_related("pendamping", "serah_terima")
-    )
-    return render(request, "pas/avsec_list.html", {"pengajuan": query})
-
-
-@login_required
-def avsec_serah_terima(request, pk):
-    """Petugas Avsec: serahkan & terima kembali fisik PAS (foto + TTD)."""
-    if not _is_avsec(request.user):
         return redirect("dashboard:home")
     pengajuan = get_object_or_404(
         Pengajuan.objects.select_related("layanan", "pemohon"), pk=pk
@@ -1105,14 +1004,63 @@ def avsec_serah_terima(request, pk):
     if request.method == "POST":
         aksi = request.POST.get("aksi")
 
+        # ---------- Input nomor PAS visitor ----------
+        if aksi == "simpan_nomor":
+            if pengajuan.status not in (
+                Pengajuan.Status.PAS_TERBIT,
+                Pengajuan.Status.ACKNOWLEDGED_AOCH,
+                Pengajuan.Status.SIAP_DILAKSANAKAN,
+                Pengajuan.Status.DILAKSANAKAN,
+            ):
+                messages.error(
+                    request,
+                    "PAS belum diterbitkan oleh Operasi — nomor PAS belum bisa disimpan.",
+                )
+                return redirect("pas:aoch_proses", pk=pk)
+            kosong = []
+            dipakai = []
+            for pd in pendamping:
+                nomor = (request.POST.get(f"nomor_pas_{pd.pk}") or "").strip()
+                if not nomor:
+                    kosong.append(pd.nama)
+                    continue
+                bentrok = (
+                    DokumenPendamping.objects.filter(nomor_pas__iexact=nomor)
+                    .exclude(pk=pd.pk)
+                    .exists()
+                )
+                if bentrok:
+                    dipakai.append(f"{nomor} ({pd.nama})")
+            if kosong:
+                messages.error(
+                    request,
+                    "Nomor PAS wajib diisi untuk: " + ", ".join(kosong) + ".",
+                )
+            elif dipakai:
+                messages.error(
+                    request,
+                    "Nomor PAS sudah dipakai pada pendamping lain: "
+                    + ", ".join(dipakai) + ".",
+                )
+            else:
+                for pd in pendamping:
+                    nomor = (request.POST.get(f"nomor_pas_{pd.pk}") or "").strip()
+                    if nomor and nomor != pd.nomor_pas:
+                        pd.nomor_pas = nomor
+                        pd.save(update_fields=["nomor_pas"])
+                log_action(request, "INPUT_NOMOR_PAS", "Pengajuan", pk)
+                messages.success(request, "Nomor PAS pendamping tersimpan.")
+            return redirect("pas:aoch_proses", pk=pk)
+
+        # ---------- Serahkan fisik PAS ----------
         if aksi == "serahkan":
             belum = [pd.nama for pd in pendamping if not pd.nomor_pas]
             if belum:
                 messages.error(
                     request,
-                    "Nomor PAS belum diinput AOCH untuk: " + ", ".join(belum) + ".",
+                    "Nomor PAS belum diinput untuk: " + ", ".join(belum) + ".",
                 )
-                return redirect("pas:avsec_serah_terima", pk=pk)
+                return redirect("pas:aoch_proses", pk=pk)
             foto = request.FILES.get("foto") or _simpan_foto(
                 request.POST.get("foto_data", "")
             )
@@ -1120,13 +1068,13 @@ def avsec_serah_terima(request, pk):
             penerima = (request.POST.get("penerima_nama") or "").strip()
             if not foto and not serah.foto_penyerahan:
                 messages.error(request, "Foto penyerahan wajib diunggah.")
-                return redirect("pas:avsec_serah_terima", pk=pk)
+                return redirect("pas:aoch_proses", pk=pk)
             if ttd is None and not serah.ttd_elektronik:
                 messages.error(request, "Tanda tangan elektronik wajib dibuat.")
-                return redirect("pas:avsec_serah_terima", pk=pk)
+                return redirect("pas:aoch_proses", pk=pk)
             if not penerima:
                 messages.error(request, "Nama penerima (PIC/wakil) wajib diisi.")
-                return redirect("pas:avsec_serah_terima", pk=pk)
+                return redirect("pas:aoch_proses", pk=pk)
             serah.status = SerahTerimaPAS.Status.DITERIMA
             serah.penerima_nama = penerima
             serah.penerima_nik = (request.POST.get("penerima_nik") or "").strip()
@@ -1147,7 +1095,7 @@ def avsec_serah_terima(request, pk):
                 "PAS diserahkan",
                 f"PAS pengajuan {pengajuan.nomor_pengajuan} diserahkan kepada "
                 f"{penerima} pada {serah.tanggal_penyerahan:%d-%m-%Y %H:%M} WIB "
-                "oleh petugas Avsec. PAS berlaku satu hari dan wajib dikembalikan "
+                "oleh petugas AOCH. PAS berlaku satu hari dan wajib dikembalikan "
                 "setelah digunakan.",
                 url=f"/pas/lacak/{pk}/",
             )
@@ -1159,22 +1107,23 @@ def avsec_serah_terima(request, pk):
                 new_value=penerima,
             )
             messages.success(request, "Penyerahan PAS tercatat.")
-            return redirect("pas:avsec_serah_terima", pk=pk)
+            return redirect("pas:aoch_proses", pk=pk)
 
+        # ---------- Terima kembali fisik PAS ----------
         if aksi == "kembalikan":
             if serah.status != SerahTerimaPAS.Status.DITERIMA:
                 messages.error(request, "PAS belum diserahkan, tidak bisa dikembalikan.")
-                return redirect("pas:avsec_serah_terima", pk=pk)
+                return redirect("pas:aoch_proses", pk=pk)
             foto = request.FILES.get("foto") or _simpan_foto(
                 request.POST.get("foto_data", "")
             )
             ttd = _simpan_ttd(request.POST.get("ttd_data", ""))
             if not foto and not serah.foto_pengembalian:
                 messages.error(request, "Foto pengembalian wajib diambil lewat kamera atau diunggah.")
-                return redirect("pas:avsec_serah_terima", pk=pk)
+                return redirect("pas:aoch_proses", pk=pk)
             if ttd is None and not serah.ttd_pengembalian:
                 messages.error(request, "Tanda tangan elektronik pengembalian wajib dibuat.")
-                return redirect("pas:avsec_serah_terima", pk=pk)
+                return redirect("pas:aoch_proses", pk=pk)
             serah.status = SerahTerimaPAS.Status.DIKEMBALIKAN
             serah.tanggal_pengembalian = timezone.now()
             serah.petugas = request.user
@@ -1187,13 +1136,14 @@ def avsec_serah_terima(request, pk):
                 pengajuan,
                 "PAS dikembalikan",
                 f"PAS pengajuan {pengajuan.nomor_pengajuan} diterima kembali oleh "
-                f"petugas Avsec pada {serah.tanggal_pengembalian:%d-%m-%Y %H:%M} WIB.",
+                f"petugas AOCH pada {serah.tanggal_pengembalian:%d-%m-%Y %H:%M} WIB.",
                 url=f"/pas/lacak/{pk}/",
             )
             log_action(request, "KEMBALI_PAS", "SerahTerimaPAS", serah.pk)
             messages.success(request, "Pengembalian PAS tercatat.")
-            return redirect("pas:avsec_serah_terima", pk=pk)
+            return redirect("pas:aoch_proses", pk=pk)
 
+        # ---------- Tandai selesai ----------
         if aksi == "selesai":
             if serah.status == SerahTerimaPAS.Status.DIKEMBALIKAN:
                 _set_status(pengajuan, Pengajuan.Status.SELESAI, request.user)
@@ -1205,13 +1155,13 @@ def avsec_serah_terima(request, pk):
                     url=f"/pas/lacak/{pk}/",
                 )
                 messages.success(request, "Pengajuan ditandai selesai.")
-            return redirect("pas:avsec_serah_terima", pk=pk)
+            return redirect("pas:aoch_proses", pk=pk)
 
-        return redirect("pas:avsec_serah_terima", pk=pk)
+        return redirect("pas:aoch_proses", pk=pk)
 
     return render(
         request,
-        "pas/avsec_proses.html",
+        "pas/aoch_proses.html",
         {
             "pengajuan": pengajuan,
             "pendamping": pendamping,

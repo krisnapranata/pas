@@ -300,7 +300,7 @@ class DaftarHitam(models.Model):
 
 
 class SerahTerimaPAS(models.Model):
-    """Catatan penyerahan & pengembalian fisik PAS visitor oleh petugas Avsec."""
+    """Catatan penyerahan & pengembalian fisik PAS visitor oleh petugas AOCH."""
 
     class Status(models.TextChoices):
         BELUM = "BELUM", "Belum Diserahkan"

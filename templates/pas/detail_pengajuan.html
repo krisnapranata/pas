@@ -184,10 +184,7 @@
             {% endif %}
         {% elif pengajuan.status == 'PAS_TERBIT' or pengajuan.status == 'DILAKSANAKAN' %}
             {% if is_aoch %}
-            <a href="{% url 'pas:aoch_proses' pengajuan.pk %}" class="btn btn-primary">Input Nomor PAS (AOCH)</a>
-            {% endif %}
-            {% if is_avsec %}
-            <a href="{% url 'pas:avsec_serah_terima' pengajuan.pk %}" class="btn btn-primary">Catat Serah Terima (Avsec)</a>
+            <a href="{% url 'pas:aoch_proses' pengajuan.pk %}" class="btn btn-primary">Input Nomor PAS &amp; Serah Terima (AOCH)</a>
             {% endif %}
         {% endif %}
     </div>
