@@ -51,7 +51,10 @@
 
                     <h6 class="mt-2">PIC Penanggung Jawab Langsung</h6>
                     <p class="text-muted small">Orang yang bertanggung jawab atas kehadiran
-                        pendamping selama berada di area bandara.</p>
+                        pendamping selama berada di area bandara. PIC juga <strong>bisa menjadi
+                        pendamping pertama</strong> — centang opsi "Pendamping 1 = PIC Penanggung
+                        Jawab" pada bagian Dokumen Identitas Pendamping agar data PIC otomatis
+                        dipakai sebagai data Pendamping 1.</p>
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label">Nama PIC Penanggung Jawab <span class="text-danger">*</span></label>
@@ -174,14 +177,15 @@
                         Isi nama, NIK, dan unggah dokumen identitas (PDF atau gambar) tiap pendamping.
                         NIK akan dicek ke daftar hitam saat tombol kirim ditekan.
                     </p>
-                    <div class="form-check mb-2">
+                    <div class="form-check mb-2 border rounded p-3 ps-5 bg-light">
                         <input class="form-check-input" type="checkbox" id="pendamping1_pic">
-                        <label class="form-check-label" for="pendamping1_pic">
+                        <label class="form-check-label fw-semibold" for="pendamping1_pic">
                             Pendamping 1 = PIC Penanggung Jawab
                         </label>
                         <div class="form-text small text-muted">
                             Centang bila penanggung jawab sekaligus menjadi pendamping pertama,
-                            agar nama dan NIK tidak perlu diketik ulang.
+                            agar nama dan NIK tidak perlu diketik ulang. Data PIC di atas akan
+                            otomatis disalin ke form Pendamping 1.
                         </div>
                     </div>
                     <div id="pendamping-area" class="mb-3"></div>

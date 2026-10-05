@@ -97,10 +97,9 @@
             <a class="ep-guest-item" href="{% url 'pas:lacak_pengajuan' %}">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>Lacak</span>
             </a>
-            <a class="ep-guest-item" href="{% url 'pembayaran:cari_bukti' %}">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg><span>Bukti</span>
+            <a class="ep-guest-item" href="{% url 'accounts:login' %}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/></svg><span>Login</span>
             </a>
-            <a class="btn btn-sm btn-primary" href="{% url 'accounts:login' %}">Login</a>
         </nav>
     </header>
     {% endif %}

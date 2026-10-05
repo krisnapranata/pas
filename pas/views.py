@@ -1359,10 +1359,20 @@ def verifikasi_pas(request):
         if pengajuan is None and query:
             pd = (
                 DokumenPendamping.objects.filter(nomor_pas__iexact=query)
+                .exclude(pengajuan__status__in=["SELESAI", "DIBATALKAN"])
+                .exclude(pengajuan__serah_terima__status="DIKEMBALIKAN")
                 .select_related("pengajuan__layanan")
                 .prefetch_related("pengajuan__serah_terima")
+                .order_by("-pengajuan__tanggal_pelaksanaan", "-pengajuan__id")
                 .first()
             )
+            if pd is None:
+                pd = (
+                    DokumenPendamping.objects.filter(nomor_pas__iexact=query)
+                    .select_related("pengajuan__layanan")
+                    .prefetch_related("pengajuan__serah_terima")
+                    .first()
+                )
             if pd:
                 pengajuan = pd.pengajuan
         if pengajuan:

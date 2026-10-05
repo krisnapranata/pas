@@ -17,7 +17,7 @@
 {% endif %}
 
 {% if pengajuan.status == 'PAS_TERBIT' %}
-<div class="alert alert-success"><strong>PAS sudah diterbitkan.</strong> Silakan ambil kartu PAS Anda di Petugas AOCH.</div>
+<div class="alert alert-success"><strong>PAS sudah terbit.</strong> PAS bisa diambil di tanggal sesuai dengan tanggal pelaksanaan ({{ pengajuan.tanggal_pelaksanaan|date:"d M Y" }}). Silakan <strong>AMBIL di Petugas AOCH BIZAM</strong>.</div>
 {% elif pengajuan.status == 'MENUNGGU_PEMBAYARAN' or pengajuan.status == 'BUKTI_TERUNGGAH' %}
     {% if menunggu_verifikasi %}
     <div class="alert alert-info">Bukti pembayaran sudah diunggah — <strong>menunggu verifikasi petugas Komersil</strong>.</div>
