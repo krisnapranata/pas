@@ -9,7 +9,7 @@
             <div class="card-body p-4">
                 <h4 class="mb-2">Lacak Pengajuan</h4>
                 <p class="text-muted small mb-4">
-                    Masukkan NIK PIC atau nomor pengajuan untuk melacak status.
+                    Masukkan NIK KTP, NPWP, No Req, atau No HP pemohon untuk melacak status.
                     Hanya pengajuan yang tanggal pelaksanaannya belum lampau yang ditampilkan.
                 </p>
 
@@ -20,10 +20,10 @@
                 <form method="post">
                     {% csrf_token %}
                     <div class="mb-3">
-                        <label class="form-label">NIK PIC atau Nomor Pengajuan</label>
+                        <label class="form-label">NIK KTP / NPWP / No Req / No HP Pemohon</label>
                         <input type="text" name="kata_kunci" class="form-control"
                                value="{{ kata_kunci }}"
-                               placeholder="cth: 3175000000000088 atau REQ-20260930-0001" required>
+                               placeholder="cth: 3175000000000088, REQ-20260930-0001, 0812..., atau NPWP" required>
                     </div>
                     <button type="submit" class="btn btn-primary w-100">Lacak Status</button>
                 </form>
@@ -64,7 +64,7 @@
                 {% else %}
                 <p class="text-muted mb-0">
                     Tidak ditemukan pengajuan yang cocok (atau tanggalnya sudah lampau).
-                    Periksa kembali NIK PIC atau nomor pengajuan Anda.
+                    Periksa kembali NIK KTP, NPWP, No Req, atau No HP pemohon Anda.
                 </p>
                 {% endif %}
             </div>

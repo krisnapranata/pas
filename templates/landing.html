@@ -94,12 +94,11 @@
             <div class="landing-track">
                 <div class="landing-track-head">
                     <strong>Lacak Pengajuan</strong>
-                    <span class="text-muted small">Masukkan nomor pengajuan dan kontak yang Anda daftarkan.</span>
+                    <span class="text-muted small">Masukkan NIK KTP, NPWP, No Req, atau No HP pemohon.</span>
                 </div>
                 <form method="post" action="{% url 'pas:lacak_pengajuan' %}" class="landing-track-form">
                     {% csrf_token %}
-                    <input type="text" name="nomor_pengajuan" class="form-control" placeholder="Nomor pengajuan (cth: REQ-20260924-0001)" required>
-                    <input type="text" name="kontak" class="form-control" placeholder="No. HP atau email" required>
+                    <input type="text" name="kata_kunci" class="form-control" placeholder="NIK KTP / NPWP / No Req / No HP pemohon" required>
                     <button type="submit" class="btn btn-primary">Lacak</button>
                 </form>
             </div>

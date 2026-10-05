@@ -574,10 +574,11 @@ def pengajuan_sukses(request):
 
 
 def lacak_pengajuan(request):
-    """Lacak status pengajuan dengan NIK PIC atau nomor pengajuan (tanpa akun).
+    """Lacak status pengajuan tanpa akun.
 
-    Hanya menampilkan pengajuan yang tanggal pelaksanaannya belum lampau,
-    supaya daftar hasil tidak rancu.
+    Pencarian memakai satu isian tunggal: NIK KTP pemohon/PIC, NPWP PIC,
+    nomor request pengajuan, atau No HP pemohon. Hanya menampilkan pengajuan
+    yang tanggal pelaksanaannya belum lampau, supaya daftar hasil tidak rancu.
     """
     hasil = []
     dicari = False
@@ -586,16 +587,29 @@ def lacak_pengajuan(request):
     if request.method == "POST":
         kata_kunci = (request.POST.get("kata_kunci") or "").strip()
         if not kata_kunci:
-            error = "Isi NIK PIC atau nomor pengajuan terlebih dahulu."
+            error = "Isi NIK KTP, NPWP, No Req, atau No HP pemohon terlebih dahulu."
         else:
             dicari = True
+            dk = "".join(c for c in kata_kunci if c.isdigit())
+            query = (
+                Q(nomor_pengajuan__iexact=kata_kunci)
+                | Q(pic_nomor_identitas__iexact=kata_kunci)
+                | Q(pic_npwp__iexact=kata_kunci)
+                | Q(pemohon_no_hp__iexact=kata_kunci)
+                | Q(pic_no_hp__iexact=kata_kunci)
+            )
+            if dk:
+                query |= (
+                    Q(nomor_pengajuan__icontains=dk)
+                    | Q(pemohon_no_hp__icontains=dk)
+                    | Q(pic_no_hp__icontains=dk)
+                    | Q(pic_nomor_identitas__icontains=dk)
+                    | Q(pic_npwp__icontains=dk)
+                )
             hasil = list(
                 Pengajuan.objects.select_related("layanan")
                 .filter(tanggal_pelaksanaan__gte=timezone.localdate())
-                .filter(
-                    Q(nomor_pengajuan__iexact=kata_kunci)
-                    | Q(pic_nomor_identitas__iexact=kata_kunci)
-                )
+                .filter(query)
                 .order_by("tanggal_pelaksanaan", "-created_at")
             )
             ids = request.session.get("lacak_pengajuan", [])
@@ -617,7 +631,7 @@ def lacak_pengajuan(request):
 
 def lacak_detail(request, pk):
     if pk not in request.session.get("lacak_pengajuan", []):
-        messages.info(request, "Masukkan NIK PIC atau nomor pengajuan untuk melihat status.")
+        messages.info(request, "Masukkan NIK KTP, NPWP, No Req, atau No HP pemohon untuk melihat status.")
         return redirect("pas:lacak_pengajuan")
     pengajuan = get_object_or_404(Pengajuan.objects.select_related("layanan"), pk=pk)
     invoice = Invoice.objects.filter(pengajuan=pengajuan).first()
