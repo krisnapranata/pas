@@ -28,7 +28,7 @@
     Penyerahan &amp; pengembalian dicatat oleh AOCH.
 </div>
 {% elif pengajuan.tanggal_berlaku_pas %}
-<div class="alert alert-{% if pengajuan.status_masa_berlaku == 'KEDALUWARSA' %}danger{% elif pengajuan.status_masa_berlaku == 'AKTIF' %}success{% else %}info{% endif %}">
+<div class="alert alert-{% if pengajuan.status_masa_berlaku == 'KEDALUWARSA' or pengajuan.status_masa_berlaku == 'SELESAI' %}danger{% elif pengajuan.status_masa_berlaku == 'AKTIF' %}success{% else %}info{% endif %}">
     Masa berlaku PAS: <strong>{{ pengajuan.tanggal_berlaku_pas|date:"d M Y" }}</strong>
     s.d. <strong>{{ pengajuan.masa_berlaku_habis|date:"d M Y" }}</strong>
     — status: <strong>{{ pengajuan.status_masa_berlaku }}</strong>.

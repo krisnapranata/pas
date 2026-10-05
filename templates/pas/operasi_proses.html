@@ -11,7 +11,7 @@
                 <h5>{{ pengajuan.nomor_pengajuan }}</h5>
                 <span class="badge text-bg-secondary">{{ pengajuan.get_status_display }}</span>
                 {% if pengajuan.tanggal_berlaku_pas %}
-                <span class="badge text-bg-{% if pengajuan.status_masa_berlaku == 'AKTIF' %}success{% elif pengajuan.status_masa_berlaku == 'KEDALUWARSA' %}danger{% else %}info{% endif %}">
+                <span class="badge text-bg-{% if pengajuan.status_masa_berlaku == 'AKTIF' %}success{% elif pengajuan.status_masa_berlaku == 'KEDALUWARSA' or pengajuan.status_masa_berlaku == 'SELESAI' %}danger{% else %}info{% endif %}">
                     Berlaku {{ pengajuan.tanggal_berlaku_pas|date:"d M Y" }} — {{ pengajuan.status_masa_berlaku }}
                 </span>
                 {% endif %}
