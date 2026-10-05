@@ -12,7 +12,7 @@
     <script src="{% static 'js/bootstrap.bundle.min.js' %}" defer></script>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-light sticky-top mb-4">
+    <nav class="navbar navbar-expand-lg sticky-top mb-4">
         <div class="container-fluid px-4">
             <a class="navbar-brand" href="{% url 'accounts:home' %}">
                 <svg viewBox="0 0 24 24" class="brand-logo" aria-hidden="true">
@@ -20,23 +20,15 @@
                 </svg>
                 <span>E<span class="brand-accent">Permit</span></span>
             </a>
-            {% if not user.is_authenticated %}
-            <div class="d-flex align-items-center gap-2">
-                <a class="btn btn-sm btn-outline-secondary" href="{% url 'pas:verifikasi_pas' %}">Verifikasi PAS</a>
-                <a class="btn btn-sm btn-outline-secondary" href="{% url 'pas:lacak_pengajuan' %}">Lacak Pengajuan</a>
-                <a class="btn btn-sm btn-outline-primary" href="{% url 'pembayaran:cari_bukti' %}">Upload Bukti</a>
-                <a class="btn btn-sm btn-primary" href="{% url 'accounts:login' %}">Masuk Petugas</a>
-            </div>
-            {% endif %}
-            {% if user.is_authenticated %}
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav" aria-controls="nav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="nav">
                 <ul class="navbar-nav me-auto">
+                    {% if user.is_authenticated %}
                     <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:home' %}">Dashboard</a></li>
                     {% if user.role == 'PEMOHON' and not user.is_staff %}
-                    <li class="nav-item"><a class="nav-link active" href="{% url 'pas:daftar_pengajuan' %}">Pemohon</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:daftar_pengajuan' %}">Pemohon</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'accounts:profil' %}">Profil Saya</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'pas:buat_pengajuan' %}">Buat Pengajuan</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'pembayaran:invoice_saya' %}">Pembayaran</a></li>
@@ -70,7 +62,15 @@
                     {% if user.is_staff or user.role == 'ADMINISTRATOR' %}
                     <li class="nav-item"><a class="nav-link" href="{% url 'audit:daftar' %}">Audit Log</a></li>
                     {% endif %}
+                    {% else %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:buat_pengajuan' %}">Pemohon</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:verifikasi_pas' %}">Verifikasi PAS</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pas:lacak_pengajuan' %}">Lacak Pengajuan</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pembayaran:cari_bukti' %}">Upload Bukti</a></li>
+                    {% endif %}
                 </ul>
+
+                {% if user.is_authenticated %}
                 <a class="btn btn-sm btn-outline-secondary me-2 position-relative" href="{% url 'notifikasi:daftar' %}">
                     Notifikasi
                     {% if unread_count %}
@@ -85,10 +85,23 @@
                     {% csrf_token %}
                     <button class="btn btn-outline-secondary btn-sm" type="submit">Keluar</button>
                 </form>
+                {% else %}
+                <a class="btn btn-sm btn-primary" href="{% url 'accounts:login' %}">Masuk Petugas</a>
+                {% endif %}
             </div>
-            {% endif %}
         </div>
     </nav>
+    <script>
+        (function () {
+            var path = window.location.pathname;
+            document.querySelectorAll('.navbar .nav-link').forEach(function (a) {
+                var href = a.getAttribute('href');
+                if (href && href !== '/' && path === href) {
+                    a.classList.add('active');
+                }
+            });
+        })();
+    </script>
 
     <div class="container-fluid px-4">
         {% if messages %}

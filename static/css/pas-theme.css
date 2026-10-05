@@ -320,11 +320,11 @@ h1, h2, h3, h4, h5, h6 {
    NAVBAR — glassmorphism
    ============================================================ */
 .navbar {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.82) 100%);
+  background: linear-gradient(180deg, rgba(224, 242, 254, 0.96) 0%, rgba(239, 246, 255, 0.92) 100%);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--line);
-  box-shadow: 0 8px 28px -14px rgba(10, 37, 64, 0.2);
+  border-bottom: 1px solid rgba(0, 82, 204, 0.15);
+  box-shadow: 0 8px 28px -14px rgba(10, 37, 64, 0.22);
 }
 .navbar-brand {
   font-weight: 800;
@@ -339,17 +339,17 @@ h1, h2, h3, h4, h5, h6 {
 
 .navbar .navbar-nav { gap: 2px; }
 .navbar .nav-link {
-  color: var(--ink);
-  font-weight: 500;
+  color: var(--navy);
+  font-weight: 600;
   border-radius: 999px;
-  padding: 0.42rem 0.85rem;
+  padding: 0.4rem 0.85rem;
+  background: rgba(10, 37, 64, 0.07);
   transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
-.navbar .nav-link:hover { background: var(--bg-alt); color: var(--blue); }
+.navbar .nav-link:hover { background: rgba(0, 82, 204, 0.14); color: var(--blue); }
 .navbar .nav-link.active {
   color: #fff;
   background: linear-gradient(135deg, #0052cc 0%, #00a6ff 100%);
-  font-weight: 600;
   box-shadow: 0 10px 24px -10px rgba(0, 102, 255, 0.55);
 }
 
