@@ -357,17 +357,19 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 10px 24px -10px rgba(0, 102, 255, 0.55);
 }
 
-/* Mobile: saat menu hamburger terbuka, item disusun dari kiri ke kanan */
+/* Mobile: item menu disusun horizontal (kiri ke kanan) saat hamburger dibuka.
+   Diterapkan juga saat state collapsing agar tidak muncul dua kali
+   (atas-bawah lalu kiri-kanan). */
 @media (max-width: 991.98px) {
-  .navbar-collapse.show .navbar-nav {
+  .navbar-collapse .navbar-nav {
     flex-direction: row;
     flex-wrap: wrap;
     gap: 6px;
   }
-  .navbar-collapse.show .navbar-nav .nav-item {
+  .navbar-collapse .navbar-nav .nav-item {
     flex: 0 0 auto;
   }
-  .navbar-collapse.show .navbar-nav .nav-link {
+  .navbar-collapse .navbar-nav .nav-link {
     white-space: nowrap;
   }
 }
