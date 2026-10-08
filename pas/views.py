@@ -1180,8 +1180,21 @@ def aoch_proses(request, pk):
                 messages.success(request, "Pengajuan ditandai selesai.")
             return redirect("pas:aoch_proses", pk=pk)
 
+        messages.error(
+            request,
+            "Aksi tidak dikenali. Muat ulang halaman lalu klik tombol yang tersedia.",
+        )
         return redirect("pas:aoch_proses", pk=pk)
 
+    boleh_serah = timezone.localdate() >= pengajuan.tanggal_pelaksanaan
+    if boleh_serah:
+        alasan_serah_tertutup = ""
+    else:
+        sisa_hari = (pengajuan.tanggal_pelaksanaan - timezone.localdate()).days
+        alasan_serah_tertutup = (
+            f"Tidak aktif — tanggal pelaksanaan {pengajuan.tanggal_pelaksanaan:%d-%m-%Y}, "
+            f"masih {sisa_hari} hari lagi. Tombol terbuka otomatis mulai tanggal tersebut."
+        )
     return render(
         request,
         "pas/aoch_proses.html",
@@ -1189,7 +1202,8 @@ def aoch_proses(request, pk):
             "pengajuan": pengajuan,
             "pendamping": pendamping,
             "serah": serah,
-            "boleh_serah": timezone.localdate() >= pengajuan.tanggal_pelaksanaan,
+            "boleh_serah": boleh_serah,
+            "alasan_serah_tertutup": alasan_serah_tertutup,
         },
     )
 

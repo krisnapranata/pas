@@ -86,9 +86,9 @@
                 </p>
 
                 {% if not boleh_serah %}
-                <div class="alert alert-danger py-2 small">
-                    PAS belum bisa diserahkan sebelum tanggal pelaksanaan
-                    ({{ pengajuan.tanggal_pelaksanaan|date:"d M Y" }}). Menu penyerahan dinonaktifkan.
+                <div class="alert alert-danger py-2 small mb-2">
+                    <strong>Penyerahan belum bisa dicatat.</strong>
+                    {{ alasan_serah_tertutup }}
                 </div>
                 {% endif %}
 
@@ -225,12 +225,29 @@
 
                     <div class="mt-3 d-flex gap-2 flex-wrap align-items-center">
                         {% if serah.status == 'BELUM' %}
-                        <button type="submit" name="aksi" value="serahkan" class="btn btn-primary" {% if not boleh_serah %}disabled{% endif %}>Catat Penyerahan</button>
+                        <button type="submit" name="aksi" value="serahkan" class="btn btn-primary"
+                                {% if not boleh_serah %}disabled title="{{ alasan_serah_tertutup }}"{% endif %}>Catat Penyerahan</button>
                         {% elif serah.status == 'DITERIMA' %}
                         <button type="submit" name="aksi" value="kembalikan" class="btn btn-warning">Catat Pengembalian</button>
-                        <button type="submit" name="aksi" value="serahkan" class="btn btn-outline-primary" {% if not boleh_serah %}disabled{% endif %}>Perbarui Penyerahan</button>
+                        <button type="submit" name="aksi" value="serahkan" class="btn btn-outline-primary"
+                                {% if not boleh_serah %}disabled title="{{ alasan_serah_tertutup }}"{% endif %}>Perbarui Penyerahan</button>
                         {% else %}
-                        <span class="alert alert-success py-2 mb-0">PAS sudah dikembalikan pemohon.</span>
+                        <div class="alert alert-success py-2 mb-0 small">
+                            <strong>Siklus PAS sudah lengkap — tidak ada tombol penyerahan di sini.</strong>
+                            PAS pengajuan ini sudah tercatat diserahkan{% if serah.tanggal_penyerahan %}
+                            pada {{ serah.tanggal_penyerahan|date:"d M Y H:i" }} WIB{% endif %}
+                            dan sudah dikembalikan{% if serah.tanggal_pengembalian %}
+                            pada {{ serah.tanggal_pengembalian|date:"d M Y H:i" }} WIB{% endif %}.
+                            {% if pengajuan.status == 'SELESAI' %}
+                            Pengajuan sudah berstatus <strong>Selesai</strong>, jadi tidak ada
+                            tindakan lagi untuk AOCH.
+                            {% else %}
+                            Yang tersisa hanya menekan <strong>Tandai Selesai</strong>.
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        {% if not boleh_serah and serah.status != 'DIKEMBALIKAN' %}
+                        <span class="small text-danger">{{ alasan_serah_tertutup }}</span>
                         {% endif %}
                         {% if serah.status == 'DIKEMBALIKAN' and pengajuan.status != 'SELESAI' %}
                         <button type="submit" name="aksi" value="selesai" class="btn btn-success">Tandai Selesai</button>
